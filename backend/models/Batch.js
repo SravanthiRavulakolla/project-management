@@ -11,6 +11,27 @@ const BatchSchema = new mongoose.Schema({
     required: [true, 'Team name is required'],
     trim: true
   },
+  // Multiple opted problems (up to 3)
+  optedProblems: [{
+    problemId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ProblemStatement'
+    },
+    coeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'COE'
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'rejected'],
+      default: 'pending'
+    },
+    optedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  // Keep for backward compatibility - the single opted problem
   optedProblemId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ProblemStatement',
@@ -33,8 +54,8 @@ const BatchSchema = new mongoose.Schema({
   },
   allotmentStatus: {
     type: String,
-    enum: ['pending', 'allotted', 'rejected'],
-    default: 'pending'
+    enum: ['none', 'pending', 'allotted', 'rejected'],
+    default: 'none'
   },
   status: {
     type: String,

@@ -58,9 +58,9 @@ function GuideDashboard() {
     }
   };
 
-  const handleAllot = async (batchId) => {
+  const handleAllot = async (batchId, problemId) => {
     try {
-      await api.allotProblem(batchId);
+      await api.allotProblem(batchId, problemId);
       alert('Team allotted successfully!');
       fetchData();
     } catch (error) {
@@ -68,10 +68,10 @@ function GuideDashboard() {
     }
   };
 
-  const handleReject = async (batchId) => {
+  const handleReject = async (batchId, problemId) => {
     if (window.confirm('Reject this team request?')) {
       try {
-        await api.rejectProblem(batchId);
+        await api.rejectProblem(batchId, problemId);
         fetchData();
       } catch (error) {
         alert('Failed to reject');
@@ -147,16 +147,16 @@ function GuideDashboard() {
           <h2>⏳ Pending Team Requests</h2>
           {optedTeams.length === 0 ? <div className="card empty-state"><h3>No Pending Requests</h3><p>Teams that opt for your problems will appear here</p></div> : (
             <div className="grid grid-2">
-              {optedTeams.map(t => (
-                <div key={t._id} className="card">
+              {optedTeams.map((t, idx) => (
+                <div key={`${t._id}-${t.optedProblemId?._id || idx}`} className="card">
                   <div className="batch-icon">👥</div>
                   <h3>{t.teamName}</h3>
                   <p><strong>Leader:</strong> {t.leaderStudentId?.name} ({t.leaderStudentId?.email})</p>
                   <p><strong>Opted Problem:</strong> {t.optedProblemId?.title}</p>
                   <p><strong>COE:</strong> {t.coeId?.name}</p>
                   <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-                    <button className="btn btn-primary" onClick={() => handleAllot(t._id)}>✅ Allot</button>
-                    <button className="btn btn-danger" onClick={() => handleReject(t._id)}>❌ Reject</button>
+                    <button className="btn btn-primary" onClick={() => handleAllot(t._id, t.optedProblemId?._id)}>✅ Allot</button>
+                    <button className="btn btn-danger" onClick={() => handleReject(t._id, t.optedProblemId?._id)}>❌ Reject</button>
                   </div>
                 </div>
               ))}

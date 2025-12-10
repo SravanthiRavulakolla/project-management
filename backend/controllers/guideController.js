@@ -69,9 +69,10 @@ exports.updateGuide = async (req, res) => {
 // @route   GET /api/guides/my-batches
 exports.getMyBatches = async (req, res) => {
   try {
-    const batches = await Batch.find({ guideId: req.user._id })
+    const batches = await Batch.find({ guideId: req.user._id, allotmentStatus: 'allotted' })
       .populate('leaderStudentId', 'name email')
       .populate('problemId', 'title description')
+      .populate('coeId', 'name')
       .populate('guideId', 'name email');
     res.status(200).json({ success: true, data: batches });
   } catch (error) {

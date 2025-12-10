@@ -76,9 +76,26 @@ exports.selectProblem = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Create a batch first' });
     }
 
-    // Rule 1: Check if batch already opted for a problem
-    if (batch.optedProblemId) {
-      return res.status(400).json({ success: false, message: 'Batch already opted for a problem' });
+    // Check if team already has an allotted problem
+    if (batch.allotmentStatus === 'allotted') {
+      return res.status(400).json({ success: false, message: 'You already have an allotted problem' });
+    }
+
+    // Initialize optedProblems if undefined
+    if (!batch.optedProblems) {
+      batch.optedProblems = [];
+    }
+
+    // Check if already opted for 3 problems
+    const pendingOpts = batch.optedProblems.filter(o => o.status === 'pending');
+    if (pendingOpts.length >= 3) {
+      return res.status(400).json({ success: false, message: 'You can only opt for a maximum of 3 problems at a time' });
+    }
+
+    // Check if already opted for this problem
+    const alreadyOpted = batch.optedProblems.find(o => o.problemId.toString() === problemId);
+    if (alreadyOpted) {
+      return res.status(400).json({ success: false, message: 'You already opted for this problem' });
     }
 
     // Get problem statement
@@ -87,15 +104,27 @@ exports.selectProblem = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Problem statement not found' });
     }
 
-    // Update batch with opted problem (pending approval)
-    batch.optedProblemId = problemId;
-    batch.coeId = problem.coeId._id;
-    batch.allotmentStatus = 'pending';
+    // Add to opted problems
+    batch.optedProblems.push({
+      problemId: problemId,
+      coeId: problem.coeId._id,
+      status: 'pending',
+      optedAt: new Date()
+    });
+
+    // Also set for backward compatibility
+    if (!batch.optedProblemId) {
+      batch.optedProblemId = problemId;
+      batch.coeId = problem.coeId._id;
+      batch.allotmentStatus = 'pending';
+    }
+
     await batch.save();
 
     const updatedBatch = await Batch.findById(batch._id)
       .populate('leaderStudentId', 'name email')
       .populate('optedProblemId', 'title description')
+      .populate('optedProblems.problemId', 'title description')
       .populate('coeId', 'name');
 
     res.status(200).json({ success: true, data: updatedBatch, message: 'Problem opted successfully. Waiting for guide approval.' });
@@ -110,18 +139,65 @@ exports.getOptedTeams = async (req, res) => {
   try {
     // Get all problem statements created by this guide
     const myProblems = await ProblemStatement.find({ guideId: req.user._id });
-    const problemIds = myProblems.map(p => p._id);
+    const problemIds = myProblems.map(p => p._id.toString());
 
-    // Get all batches that opted for these problems
-    const batches = await Batch.find({
-      optedProblemId: { $in: problemIds },
-      allotmentStatus: 'pending'
+    const result = [];
+
+    // Handle NEW format: batches with optedProblems array
+    const newFormatBatches = await Batch.find({
+      'optedProblems.status': 'pending'
+    })
+      .populate('leaderStudentId', 'name email')
+      .populate('optedProblems.problemId', 'title description guideId')
+      .populate('optedProblems.coeId', 'name');
+
+    for (const batch of newFormatBatches) {
+      if (batch.optedProblems && batch.optedProblems.length > 0) {
+        for (const opt of batch.optedProblems) {
+          if (opt.status === 'pending' && opt.problemId && problemIds.includes(opt.problemId._id.toString())) {
+            result.push({
+              _id: batch._id,
+              teamName: batch.teamName,
+              leaderStudentId: batch.leaderStudentId,
+              optedProblemId: opt.problemId,
+              coeId: opt.coeId,
+              optedAt: opt.optedAt
+            });
+          }
+        }
+      }
+    }
+
+    // Handle OLD format: batches with only optedProblemId (no optedProblems array)
+    const oldFormatBatches = await Batch.find({
+      optedProblemId: { $in: myProblems.map(p => p._id) },
+      allotmentStatus: 'pending',
+      $or: [
+        { optedProblems: { $exists: false } },
+        { optedProblems: { $size: 0 } }
+      ]
     })
       .populate('leaderStudentId', 'name email')
       .populate('optedProblemId', 'title description')
       .populate('coeId', 'name');
 
-    res.status(200).json({ success: true, data: batches });
+    for (const batch of oldFormatBatches) {
+      // Check if already added from new format
+      const alreadyAdded = result.find(r => r._id.toString() === batch._id.toString() &&
+        r.optedProblemId?._id?.toString() === batch.optedProblemId?._id?.toString());
+      if (!alreadyAdded) {
+        result.push({
+          _id: batch._id,
+          teamName: batch.teamName,
+          leaderStudentId: batch.leaderStudentId,
+          optedProblemId: batch.optedProblemId,
+          coeId: batch.coeId,
+          optedAt: batch.createdAt
+        });
+      }
+    }
+
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -131,13 +207,22 @@ exports.getOptedTeams = async (req, res) => {
 // @route   POST /api/batches/:id/allot
 exports.allotProblem = async (req, res) => {
   try {
+    const { problemId } = req.body;
+    console.log('Allot request - batchId:', req.params.id, 'problemId:', problemId);
+
     const batch = await Batch.findById(req.params.id);
     if (!batch) {
       return res.status(404).json({ success: false, message: 'Batch not found' });
     }
 
-    // Get the problem they opted for
-    const problem = await ProblemStatement.findById(batch.optedProblemId);
+    // Find the problem to allot (from request body or from optedProblemId)
+    const targetProblemId = problemId || batch.optedProblemId;
+    if (!targetProblemId) {
+      return res.status(400).json({ success: false, message: 'No problem specified' });
+    }
+
+    // Get the problem
+    const problem = await ProblemStatement.findById(targetProblemId);
     if (!problem) {
       return res.status(404).json({ success: false, message: 'Problem not found' });
     }
@@ -149,24 +234,46 @@ exports.allotProblem = async (req, res) => {
 
     // Check max batches for guide
     const guide = await Guide.findById(req.user._id);
+    if (!guide) {
+      return res.status(404).json({ success: false, message: 'Guide not found' });
+    }
     if (guide.assignedBatches >= guide.maxBatches) {
       return res.status(400).json({ success: false, message: 'You have reached max batch limit' });
     }
 
+    // Update the opted problem status in optedProblems array
+    if (batch.optedProblems && batch.optedProblems.length > 0) {
+      batch.optedProblems = batch.optedProblems.map(opt => {
+        if (opt.problemId && opt.problemId.toString() === targetProblemId.toString()) {
+          opt.status = 'accepted';
+        } else {
+          // Reject other pending problems since one is being allotted
+          if (opt.status === 'pending') {
+            opt.status = 'rejected';
+          }
+        }
+        return opt;
+      });
+    }
+
     // Allot the problem
-    batch.problemId = batch.optedProblemId;
+    batch.problemId = targetProblemId;
+    batch.optedProblemId = targetProblemId;
+    batch.coeId = problem.coeId;
     batch.guideId = req.user._id;
     batch.allotmentStatus = 'allotted';
     batch.status = 'In Progress';
     await batch.save();
+    console.log('Batch saved successfully');
 
     // Update problem count
-    problem.selectedBatchCount += 1;
+    problem.selectedBatchCount = (problem.selectedBatchCount || 0) + 1;
     await problem.save();
+    console.log('Problem updated successfully');
 
-    // Update guide's assigned batches
-    guide.assignedBatches += 1;
-    await guide.save();
+    // Update guide's assigned batches using findByIdAndUpdate to avoid pre-save hook
+    await Guide.findByIdAndUpdate(req.user._id, { $inc: { assignedBatches: 1 } });
+    console.log('Guide updated successfully');
 
     const updatedBatch = await Batch.findById(batch._id)
       .populate('leaderStudentId', 'name email')
@@ -176,6 +283,7 @@ exports.allotProblem = async (req, res) => {
 
     res.status(200).json({ success: true, data: updatedBatch, message: 'Team allotted successfully!' });
   } catch (error) {
+    console.error('Allot error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -184,20 +292,50 @@ exports.allotProblem = async (req, res) => {
 // @route   POST /api/batches/:id/reject
 exports.rejectProblem = async (req, res) => {
   try {
+    const { problemId } = req.body;
     const batch = await Batch.findById(req.params.id);
     if (!batch) {
       return res.status(404).json({ success: false, message: 'Batch not found' });
     }
 
-    const problem = await ProblemStatement.findById(batch.optedProblemId);
+    // Find the problem to reject (from request body or from optedProblemId)
+    const targetProblemId = problemId || batch.optedProblemId;
+    if (!targetProblemId) {
+      return res.status(400).json({ success: false, message: 'No problem specified' });
+    }
+
+    const problem = await ProblemStatement.findById(targetProblemId);
+    if (!problem) {
+      return res.status(404).json({ success: false, message: 'Problem not found' });
+    }
+
     if (problem.guideId.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    // Reset the batch's opted problem
-    batch.optedProblemId = null;
-    batch.coeId = null;
-    batch.allotmentStatus = 'pending';
+    // Update the opted problem status in optedProblems array
+    if (batch.optedProblems && batch.optedProblems.length > 0) {
+      batch.optedProblems = batch.optedProblems.map(opt => {
+        if (opt.problemId && opt.problemId.toString() === targetProblemId.toString()) {
+          opt.status = 'rejected';
+        }
+        return opt;
+      });
+    }
+
+    // If this was the main optedProblemId, clear it
+    if (batch.optedProblemId && batch.optedProblemId.toString() === targetProblemId.toString()) {
+      batch.optedProblemId = null;
+      batch.coeId = null;
+      // Check if there are other pending problems
+      const pendingProblems = batch.optedProblems?.filter(o => o.status === 'pending') || [];
+      if (pendingProblems.length > 0) {
+        batch.allotmentStatus = 'pending';
+      } else {
+        batch.allotmentStatus = 'none';
+      }
+    }
+
     await batch.save();
 
     res.status(200).json({ success: true, message: 'Request rejected. Team can opt for another problem.' });

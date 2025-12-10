@@ -1,4 +1,5 @@
 const ProblemStatement = require('../models/ProblemStatement');
+const Batch = require('../models/Batch');
 
 // @desc    Get all problem statements
 // @route   GET /api/problems
@@ -100,10 +101,32 @@ exports.updateProblem = async (req, res) => {
 // @route   DELETE /api/problems/:id
 exports.deleteProblem = async (req, res) => {
   try {
-    const problem = await ProblemStatement.findByIdAndDelete(req.params.id);
+    const problem = await ProblemStatement.findById(req.params.id);
     if (!problem) {
       return res.status(404).json({ success: false, message: 'Problem statement not found' });
     }
+
+    // Clear this problem from all batches that opted for it
+    await Batch.updateMany(
+      { 'optedProblems.problemId': req.params.id },
+      { $pull: { optedProblems: { problemId: req.params.id } } }
+    );
+
+    // Also clear legacy optedProblemId field
+    await Batch.updateMany(
+      { optedProblemId: req.params.id },
+      {
+        $set: {
+          optedProblemId: null,
+          coeId: null,
+          allotmentStatus: 'none'
+        }
+      }
+    );
+
+    // Delete the problem
+    await ProblemStatement.findByIdAndDelete(req.params.id);
+
     res.status(200).json({ success: true, data: {} });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
