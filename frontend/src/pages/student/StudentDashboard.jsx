@@ -41,18 +41,23 @@ function StudentDashboard() {
   // Check various states
   const hasOptedProblem = batch.optedProblemId;
   const isAllotted = batch.allotmentStatus === 'allotted';
-  const isPending = batch.allotmentStatus === 'pending' && hasOptedProblem;
-  const canSelectProblem = !hasOptedProblem && !isAllotted;
+  const isPending = batch.allotmentStatus === 'pending';
+
+  // Count pending opted problems
+  const pendingOptedCount = batch.optedProblems?.filter(o => o.status === 'pending')?.length || 0;
+
+  // Can select if not allotted and has less than 3 pending selections
+  const canSelectProblem = !isAllotted && pendingOptedCount < 3;
 
   const getStatusText = () => {
     if (isAllotted) return batch.status;
-    if (isPending) return 'Waiting for Guide Approval';
+    if (pendingOptedCount > 0) return `Waiting for Guide Approval (${pendingOptedCount} pending)`;
     return 'Select a Problem Statement';
   };
 
   const getStatusClass = () => {
     if (isAllotted) return batch.status.toLowerCase().replace(' ', '-');
-    if (isPending) return 'pending';
+    if (pendingOptedCount > 0) return 'pending';
     return 'not-started';
   };
 
@@ -98,6 +103,7 @@ function StudentDashboard() {
               coeName={selectedCOE.name}
               onBack={() => setSelectedCOE(null)}
               onProblemSelected={fetchBatch}
+              batch={batch}
             />
           ) : (
             <COEList onCOESelect={setSelectedCOE} />

@@ -27,6 +27,8 @@ exports.getMyBatch = async (req, res) => {
       .populate('leaderStudentId', 'name email')
       .populate('problemId', 'title description coeId datasetUrl')
       .populate('optedProblemId', 'title description')
+      .populate('optedProblems.problemId', 'title description')
+      .populate('optedProblems.coeId', 'name')
       .populate('coeId', 'name')
       .populate('guideId', 'name email');
 
@@ -266,10 +268,31 @@ exports.allotProblem = async (req, res) => {
     await batch.save();
     console.log('Batch saved successfully');
 
-    // Update problem count
-    problem.selectedBatchCount = (problem.selectedBatchCount || 0) + 1;
+    // Mark problem as fully assigned (only 1 batch can have it)
+    problem.selectedBatchCount = 1;
+    problem.maxBatches = 1; // Ensure no more batches can select it
     await problem.save();
     console.log('Problem updated successfully');
+
+    // Remove this batch from other problem's pending requests
+    // (clear this batch from any other guide's pending requests since it's now allotted)
+    await Batch.findByIdAndUpdate(batch._id, {
+      $set: {
+        optedProblems: batch.optedProblems // Keep updated optedProblems with statuses
+      }
+    });
+
+    // Also remove this problem from other batches' optedProblems since it's now taken
+    await Batch.updateMany(
+      {
+        _id: { $ne: batch._id },
+        'optedProblems.problemId': targetProblemId
+      },
+      {
+        $pull: { optedProblems: { problemId: targetProblemId } }
+      }
+    );
+    console.log('Cleaned up other batches pending requests');
 
     // Update guide's assigned batches using findByIdAndUpdate to avoid pre-save hook
     await Guide.findByIdAndUpdate(req.user._id, { $inc: { assignedBatches: 1 } });
