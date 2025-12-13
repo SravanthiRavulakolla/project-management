@@ -26,6 +26,8 @@ app.use('/api/batches', require('./routes/batchRoutes'));
 app.use('/api/team-members', require('./routes/teamMemberRoutes'));
 app.use('/api/progress', require('./routes/progressRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/timeline', require('./routes/timelineRoutes'));
+app.use('/api/submissions', require('./routes/submissionRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => {

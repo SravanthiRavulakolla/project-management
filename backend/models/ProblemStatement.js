@@ -15,9 +15,11 @@ const ProblemStatementSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  year: {
-    type: Number,
-    required: [true, 'Year is required']
+  // Target year of study for this problem statement
+  targetYear: {
+    type: String,
+    enum: ['2nd', '3rd', '4th'],
+    required: [true, 'Target year is required']
   },
   guideId: {
     type: mongoose.Schema.Types.ObjectId,

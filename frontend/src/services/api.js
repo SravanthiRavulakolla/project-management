@@ -60,3 +60,18 @@ export const getAdminOverview = () => axios.get(`${API_URL}/admin/overview`);
 export const getBatchGuideMapping = () => axios.get(`${API_URL}/admin/batch-guide-mapping`);
 export const createAdmin = (data) => axios.post(`${API_URL}/admin/create`, data);
 
+// Timeline
+export const getAllTimelineEvents = (year) => axios.get(`${API_URL}/timeline`, { params: { year } });
+export const getTimelineForBatch = (batchId) => axios.get(`${API_URL}/timeline/batch/${batchId}`);
+export const createTimelineEvent = (data) => axios.post(`${API_URL}/timeline`, data);
+export const updateTimelineEvent = (id, data) => axios.put(`${API_URL}/timeline/${id}`, data);
+export const deleteTimelineEvent = (id) => axios.delete(`${API_URL}/timeline/${id}`);
+
+// Submissions
+export const createSubmission = (data) => axios.post(`${API_URL}/submissions`, data);
+export const getSubmission = (id) => axios.get(`${API_URL}/submissions/${id}`);
+export const getBatchSubmissions = (batchId) => axios.get(`${API_URL}/submissions/batch/${batchId}`);
+export const getGuideSubmissions = () => axios.get(`${API_URL}/submissions/guide`);
+export const addSubmissionComment = (id, comment) => axios.post(`${API_URL}/submissions/${id}/comment`, { comment });
+export const assignSubmissionMarks = (id, marks, status) => axios.post(`${API_URL}/submissions/${id}/marks`, { marks, status });
+

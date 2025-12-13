@@ -11,6 +11,22 @@ const BatchSchema = new mongoose.Schema({
     required: [true, 'Team name is required'],
     trim: true
   },
+  // Year, Branch, Section - inherited from student leader
+  year: {
+    type: String,
+    enum: ['2nd', '3rd', '4th'],
+    required: [true, 'Year is required']
+  },
+  branch: {
+    type: String,
+    enum: ['CSE', 'IT', 'ECE', 'CSM', 'EEE', 'CSD', 'ETM'],
+    required: [true, 'Branch is required']
+  },
+  section: {
+    type: String,
+    enum: ['A', 'B', 'C', 'D', 'E'],
+    required: [true, 'Section is required']
+  },
   // Multiple opted problems (up to 3)
   optedProblems: [{
     problemId: {

@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
 import COEManagement from './COEManagement';
+import TimelineManagement from './TimelineManagement';
 import './AdminDashboard.css';
+
+const YEARS = ['2nd', '3rd', '4th'];
+const BRANCHES = ['CSE', 'IT', 'ECE', 'CSM', 'EEE', 'CSD', 'ETM'];
+const SECTIONS = ['A', 'B', 'C', 'D', 'E'];
 
 function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -9,7 +14,13 @@ function AdminDashboard() {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCOE, setSelectedCOE] = useState(null);
-  const [activeTab, setActiveTab] = useState('coes');
+  const [selectedBatch, setSelectedBatch] = useState(null);
+  const [activeTab, setActiveTab] = useState('timeline');
+
+  // Filters
+  const [filterYear, setFilterYear] = useState('');
+  const [filterBranch, setFilterBranch] = useState('');
+  const [filterSection, setFilterSection] = useState('');
 
   const fetchData = async () => {
     try {
@@ -33,7 +44,19 @@ function AdminDashboard() {
   const getBatchesForCOE = (coeId) => batches.filter(b => b.coeId?._id === coeId || b.coeId === coeId);
   const getStatusColor = (status) => status === 'Completed' ? 'success' : status === 'In Progress' ? 'warning' : 'info';
 
+  // Filter batches by year, branch, section
+  const getFilteredBatches = () => {
+    return batches.filter(b => {
+      if (filterYear && b.year !== filterYear) return false;
+      if (filterBranch && b.branch !== filterBranch) return false;
+      if (filterSection && b.section !== filterSection) return false;
+      return true;
+    });
+  };
+
   if (loading) return <div className="loading">Loading...</div>;
+
+  const filteredBatches = getFilteredBatches();
 
   return (
     <div className="admin-dashboard">
@@ -51,9 +74,132 @@ function AdminDashboard() {
       </div>
 
       <div className="tabs">
+        <button className={`tab ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>📅 Timeline</button>
+        <button className={`tab ${activeTab === 'filter' ? 'active' : ''}`} onClick={() => { setActiveTab('filter'); setSelectedBatch(null); }}>🔍 Filter by Class</button>
         <button className={`tab ${activeTab === 'coes' ? 'active' : ''}`} onClick={() => { setActiveTab('coes'); setSelectedCOE(null); }}>🏛️ COE Overview</button>
         <button className={`tab ${activeTab === 'manage' ? 'active' : ''}`} onClick={() => setActiveTab('manage')}>⚙️ Manage COEs</button>
       </div>
+
+      {activeTab === 'timeline' && <TimelineManagement />}
+
+      {activeTab === 'filter' && !selectedBatch && (
+        <div className="tab-content">
+          <h2>🔍 Filter Teams by Year, Branch & Section</h2>
+
+          <div className="card" style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '15px', alignItems: 'end' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Year</label>
+                <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)}>
+                  <option value="">All Years</option>
+                  {YEARS.map(y => <option key={y} value={y}>{y} Year</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Branch</label>
+                <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)}>
+                  <option value="">All Branches</option>
+                  {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Section</label>
+                <select value={filterSection} onChange={(e) => setFilterSection(e.target.value)}>
+                  <option value="">All Sections</option>
+                  {SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <button className="btn btn-secondary" onClick={() => { setFilterYear(''); setFilterBranch(''); setFilterSection(''); }}>
+                Clear Filters
+              </button>
+            </div>
+          </div>
+
+          {(filterYear || filterBranch || filterSection) && (
+            <p style={{ color: '#666', marginBottom: '15px' }}>
+              Showing: {filterYear || 'All Years'} • {filterBranch || 'All Branches'} • Section {filterSection || 'All'}
+              <strong> ({filteredBatches.length} teams)</strong>
+            </p>
+          )}
+
+          {filteredBatches.length === 0 ? (
+            <div className="card empty-state">
+              <h3>No Teams Found</h3>
+              <p>No teams match the selected filters</p>
+            </div>
+          ) : (
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Team Name</th>
+                    <th>Class</th>
+                    <th>Leader</th>
+                    <th>Problem Statement</th>
+                    <th>Guide</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredBatches.map(batch => (
+                    <tr key={batch._id}>
+                      <td><strong>{batch.teamName}</strong></td>
+                      <td>{batch.year} {batch.branch}-{batch.section}</td>
+                      <td>{batch.leaderStudentId?.name}</td>
+                      <td>{batch.problemId?.title || batch.optedProblemId?.title || <span style={{ color: '#999' }}>Not assigned</span>}</td>
+                      <td>{batch.guideId?.name || <span style={{ color: '#f59e0b' }}>Pending</span>}</td>
+                      <td><span className={`badge badge-${getStatusColor(batch.status)}`}>{batch.status}</span></td>
+                      <td>
+                        <button className="btn btn-primary btn-sm" onClick={() => setSelectedBatch(batch)}>
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'filter' && selectedBatch && (
+        <div className="tab-content">
+          <button className="btn btn-secondary" onClick={() => setSelectedBatch(null)} style={{ marginBottom: '20px' }}>← Back to List</button>
+
+          <div className="card" style={{ marginBottom: '20px' }}>
+            <h2>👥 {selectedBatch.teamName}</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
+              <div>
+                <p><strong>Class:</strong> {selectedBatch.year} Year - {selectedBatch.branch} - Section {selectedBatch.section}</p>
+                <p><strong>Team Leader:</strong> {selectedBatch.leaderStudentId?.name}</p>
+                <p><strong>Email:</strong> {selectedBatch.leaderStudentId?.email}</p>
+              </div>
+              <div>
+                <p><strong>Problem Statement:</strong> {selectedBatch.problemId?.title || 'Not assigned'}</p>
+                <p><strong>Guide:</strong> {selectedBatch.guideId?.name || 'Not assigned'}</p>
+                <p><strong>COE:</strong> {selectedBatch.coeId?.name || 'Not assigned'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3>📊 Progress Status</h3>
+            <div style={{ marginTop: '15px' }}>
+              <span className={`badge badge-${getStatusColor(selectedBatch.status)}`} style={{ fontSize: '16px', padding: '10px 20px' }}>
+                {selectedBatch.status}
+              </span>
+            </div>
+            {selectedBatch.problemId?.description && (
+              <div style={{ marginTop: '20px' }}>
+                <h4>Problem Description:</h4>
+                <p style={{ color: '#666' }}>{selectedBatch.problemId.description}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {activeTab === 'coes' && !selectedCOE && (
         <div className="tab-content">
@@ -96,6 +242,7 @@ function AdminDashboard() {
                 <thead>
                   <tr>
                     <th>Team Name</th>
+                    <th>Class</th>
                     <th>Leader</th>
                     <th>Problem Statement</th>
                     <th>Guide/Mentor</th>
@@ -106,6 +253,7 @@ function AdminDashboard() {
                   {getBatchesForCOE(selectedCOE._id).map(batch => (
                     <tr key={batch._id}>
                       <td><strong>{batch.teamName}</strong></td>
+                      <td>{batch.year} {batch.branch}-{batch.section}</td>
                       <td>{batch.leaderStudentId?.name}<br/><small style={{ color: '#888' }}>{batch.leaderStudentId?.email}</small></td>
                       <td>{batch.problemId?.title || batch.optedProblemId?.title || '-'}</td>
                       <td>{batch.guideId?.name || <span style={{ color: '#f59e0b' }}>Pending</span>}<br/><small style={{ color: '#888' }}>{batch.guideId?.email}</small></td>

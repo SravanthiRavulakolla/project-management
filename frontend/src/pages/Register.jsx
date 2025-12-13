@@ -3,11 +3,18 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Auth.css';
 
+const YEARS = ['2nd', '3rd', '4th'];
+const BRANCHES = ['CSE', 'IT', 'ECE', 'CSM', 'EEE', 'CSD', 'ETM'];
+const SECTIONS = ['A', 'B', 'C', 'D', 'E'];
+
 function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [year, setYear] = useState('');
+  const [branch, setBranch] = useState('');
+  const [section, setSection] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -22,10 +29,15 @@ function Register() {
       return;
     }
 
+    if (!year || !branch || !section) {
+      setError('Please select year, branch, and section');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await register(name, email, password);
+      await register(name, email, password, 'student', { year, branch, section });
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -89,6 +101,30 @@ function Register() {
               placeholder="Confirm your password"
               required
             />
+          </div>
+
+          <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+            <div className="form-group">
+              <label>Year</label>
+              <select value={year} onChange={(e) => setYear(e.target.value)} required>
+                <option value="">Select</option>
+                {YEARS.map(y => <option key={y} value={y}>{y} Year</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Branch</label>
+              <select value={branch} onChange={(e) => setBranch(e.target.value)} required>
+                <option value="">Select</option>
+                {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Section</label>
+              <select value={section} onChange={(e) => setSection(e.target.value)} required>
+                <option value="">Select</option>
+                {SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
           </div>
 
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>

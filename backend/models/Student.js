@@ -20,6 +20,21 @@ const StudentSchema = new mongoose.Schema({
     minlength: 6,
     select: false
   },
+  year: {
+    type: String,
+    enum: ['2nd', '3rd', '4th'],
+    required: [true, 'Year is required']
+  },
+  branch: {
+    type: String,
+    enum: ['CSE', 'IT', 'ECE', 'CSM', 'EEE', 'CSD', 'ETM'],
+    required: [true, 'Branch is required']
+  },
+  section: {
+    type: String,
+    enum: ['A', 'B', 'C', 'D', 'E'],
+    required: [true, 'Section is required']
+  },
   role: {
     type: String,
     default: 'student'
@@ -27,13 +42,12 @@ const StudentSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Hash password before saving
-StudentSchema.pre('save', async function(next) {
+StudentSchema.pre('save', async function() {
   if (!this.isModified('password')) {
-    return next();
+    return;
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
 // Match password

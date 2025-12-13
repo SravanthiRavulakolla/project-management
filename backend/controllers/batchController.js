@@ -48,16 +48,25 @@ exports.getMyBatch = async (req, res) => {
 exports.createBatch = async (req, res) => {
   try {
     const { teamName } = req.body;
-    
+
     // Check if student already has a batch
     const existingBatch = await Batch.findOne({ leaderStudentId: req.user._id });
     if (existingBatch) {
       return res.status(400).json({ success: false, message: 'You already have a batch' });
     }
 
+    // Get student's year, branch, section
+    const student = req.user;
+    if (!student.year || !student.branch || !student.section) {
+      return res.status(400).json({ success: false, message: 'Student profile incomplete. Please update year, branch, and section.' });
+    }
+
     const batch = await Batch.create({
       leaderStudentId: req.user._id,
-      teamName
+      teamName,
+      year: student.year,
+      branch: student.branch,
+      section: student.section
     });
 
     res.status(201).json({ success: true, data: batch });
@@ -104,6 +113,11 @@ exports.selectProblem = async (req, res) => {
     const problem = await ProblemStatement.findById(problemId).populate('coeId');
     if (!problem) {
       return res.status(404).json({ success: false, message: 'Problem statement not found' });
+    }
+
+    // Check if problem's target year matches student's year
+    if (problem.targetYear && batch.year && problem.targetYear !== batch.year) {
+      return res.status(400).json({ success: false, message: `This problem is for ${problem.targetYear} year students only` });
     }
 
     // Add to opted problems

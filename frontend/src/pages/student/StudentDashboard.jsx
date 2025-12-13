@@ -6,6 +6,7 @@ import COEList from './COEList';
 import ProblemList from './ProblemList';
 import ProjectDetails from './ProjectDetails';
 import ProgressUpdates from './ProgressUpdates';
+import TimelineProgress from './TimelineProgress';
 import './StudentDashboard.css';
 
 function StudentDashboard() {
@@ -81,9 +82,14 @@ function StudentDashboard() {
           </button>
         )}
         {isAllotted && (
-          <button className={`tab ${activeTab === 'progress' ? 'active' : ''}`} onClick={() => setActiveTab('progress')}>
-            📝 Progress Updates
-          </button>
+          <>
+            <button className={`tab ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>
+              📅 Timeline & Submissions
+            </button>
+            <button className={`tab ${activeTab === 'progress' ? 'active' : ''}`} onClick={() => setActiveTab('progress')}>
+              📝 Progress Updates
+            </button>
+          </>
         )}
       </div>
 
@@ -108,6 +114,10 @@ function StudentDashboard() {
           ) : (
             <COEList onCOESelect={setSelectedCOE} />
           )
+        )}
+
+        {activeTab === 'timeline' && isAllotted && (
+          <TimelineProgress batchId={batch._id} />
         )}
 
         {activeTab === 'progress' && isAllotted && (

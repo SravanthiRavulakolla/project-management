@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
 import BatchDetails from './BatchDetails';
+import SubmissionsReview from './SubmissionsReview';
 import './GuideDashboard.css';
 
 function GuideDashboard() {
@@ -12,7 +13,9 @@ function GuideDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [showAddProblem, setShowAddProblem] = useState(false);
-  const [newProblem, setNewProblem] = useState({ title: '', description: '', coeId: '', year: new Date().getFullYear(), datasetUrl: '' });
+  const [newProblem, setNewProblem] = useState({ title: '', description: '', coeId: '', targetYear: '', datasetUrl: '' });
+
+  const TARGET_YEARS = ['2nd', '3rd', '4th'];
 
   const fetchData = async () => {
     try {
@@ -39,7 +42,7 @@ function GuideDashboard() {
     e.preventDefault();
     try {
       await api.createProblem(newProblem);
-      setNewProblem({ title: '', description: '', coeId: '', year: new Date().getFullYear(), datasetUrl: '' });
+      setNewProblem({ title: '', description: '', coeId: '', targetYear: '', datasetUrl: '' });
       setShowAddProblem(false);
       fetchData();
     } catch (error) {
@@ -100,6 +103,7 @@ function GuideDashboard() {
         <button className={`tab ${activeTab === 'problems' ? 'active' : ''}`} onClick={() => setActiveTab('problems')}>📋 My Problem Statements</button>
         <button className={`tab ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => setActiveTab('requests')}>⏳ Pending Requests ({optedTeams.length})</button>
         <button className={`tab ${activeTab === 'teams' ? 'active' : ''}`} onClick={() => setActiveTab('teams')}>👥 My Teams</button>
+        <button className={`tab ${activeTab === 'submissions' ? 'active' : ''}`} onClick={() => setActiveTab('submissions')}>📝 Review Submissions</button>
       </div>
 
       {activeTab === 'problems' && (
@@ -111,16 +115,23 @@ function GuideDashboard() {
           {showAddProblem && (
             <div className="card" style={{ marginBottom: '20px' }}>
               <form onSubmit={handleAddProblem}>
-                <div className="form-group"><label>COE</label>
-                  <select value={newProblem.coeId} onChange={(e) => setNewProblem({...newProblem, coeId: e.target.value})} required>
-                    <option value="">Select COE</option>
-                    {coes.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                  </select>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div className="form-group"><label>COE</label>
+                    <select value={newProblem.coeId} onChange={(e) => setNewProblem({...newProblem, coeId: e.target.value})} required>
+                      <option value="">Select COE</option>
+                      {coes.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group"><label>Target Year</label>
+                    <select value={newProblem.targetYear} onChange={(e) => setNewProblem({...newProblem, targetYear: e.target.value})} required>
+                      <option value="">Select Year</option>
+                      {TARGET_YEARS.map(y => <option key={y} value={y}>{y} Year</option>)}
+                    </select>
+                  </div>
                 </div>
                 <div className="form-group"><label>Title</label><input type="text" value={newProblem.title} onChange={(e) => setNewProblem({...newProblem, title: e.target.value})} required /></div>
                 <div className="form-group"><label>Description</label><textarea value={newProblem.description} onChange={(e) => setNewProblem({...newProblem, description: e.target.value})} rows={3} /></div>
-                <div className="form-group"><label>Year</label><input type="number" value={newProblem.year} onChange={(e) => setNewProblem({...newProblem, year: e.target.value})} required /></div>
-                <div className="form-group"><label>Dataset URL</label><input type="url" value={newProblem.datasetUrl} onChange={(e) => setNewProblem({...newProblem, datasetUrl: e.target.value})} /></div>
+                <div className="form-group"><label>Dataset URL (optional)</label><input type="url" value={newProblem.datasetUrl} onChange={(e) => setNewProblem({...newProblem, datasetUrl: e.target.value})} /></div>
                 <div style={{ display: 'flex', gap: '10px' }}><button type="submit" className="btn btn-primary">Save</button><button type="button" className="btn btn-secondary" onClick={() => setShowAddProblem(false)}>Cancel</button></div>
               </form>
             </div>
@@ -130,11 +141,11 @@ function GuideDashboard() {
               {problems.map(p => (
                 <div key={p._id} className="card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                    <div><h3>{p.title}</h3><span className="badge badge-info">{p.coeId?.name}</span></div>
+                    <div><h3>{p.title}</h3><span className="badge badge-info">{p.coeId?.name}</span> <span className="badge badge-warning">{p.targetYear} Year</span></div>
                     <button className="btn btn-danger btn-sm" onClick={() => handleDeleteProblem(p._id)}>🗑️</button>
                   </div>
                   <p style={{ color: '#666', margin: '10px 0' }}>{p.description}</p>
-                  <div style={{ fontSize: '14px', color: '#888' }}>Year: {p.year} | Teams: {p.selectedBatchCount}/{p.maxBatches}</div>
+                  <div style={{ fontSize: '14px', color: '#888' }}>Teams: {p.selectedBatchCount}/{p.maxBatches}</div>
                 </div>
               ))}
             </div>
@@ -151,6 +162,9 @@ function GuideDashboard() {
                 <div key={`${t._id}-${t.optedProblemId?._id || idx}`} className="card">
                   <div className="batch-icon">👥</div>
                   <h3>{t.teamName}</h3>
+                  <p style={{ color: '#667eea', fontWeight: '500', marginBottom: '10px' }}>
+                    {t.year} Year • {t.branch} • Section {t.section}
+                  </p>
                   <p><strong>Leader:</strong> {t.leaderStudentId?.name} ({t.leaderStudentId?.email})</p>
                   <p><strong>Opted Problem:</strong> {t.optedProblemId?.title}</p>
                   <p><strong>COE:</strong> {t.coeId?.name}</p>
@@ -184,6 +198,8 @@ function GuideDashboard() {
           )}
         </div>
       )}
+
+      {activeTab === 'submissions' && <SubmissionsReview />}
     </div>
   );
 }

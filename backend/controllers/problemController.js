@@ -60,12 +60,12 @@ exports.getProblem = async (req, res) => {
 // @route   POST /api/problems
 exports.createProblem = async (req, res) => {
   try {
-    const { coeId, title, description, year, datasetUrl } = req.body;
+    const { coeId, title, description, targetYear, datasetUrl } = req.body;
     // Guide creates their own problem - use their ID
     const guideId = req.user.role === 'guide' ? req.user._id : req.body.guideId;
 
     const problem = await ProblemStatement.create({
-      coeId, title, description, year, guideId, datasetUrl
+      coeId, title, description, targetYear, guideId, datasetUrl
     });
 
     const populatedProblem = await ProblemStatement.findById(problem._id)

@@ -41,8 +41,14 @@ function ProblemList({ coeId, coeName, onBack, onProblemSelected, batch }) {
 
   if (loading) return <div>Loading problems...</div>;
 
-  // Filter out already allotted problems (selectedBatchCount >= 1 means already assigned)
-  const availableProblems = problems.filter(p => p.selectedBatchCount < 1);
+  // Filter out already allotted problems and filter by student's year
+  const availableProblems = problems.filter(p => {
+    // Filter out allotted problems
+    if (p.selectedBatchCount >= 1) return false;
+    // Filter by target year if student has a year
+    if (batch?.year && p.targetYear && p.targetYear !== batch.year) return false;
+    return true;
+  });
 
   return (
     <div>
@@ -92,7 +98,7 @@ function ProblemList({ coeId, coeName, onBack, onProblemSelected, batch }) {
                     <strong>Guide:</strong> {problem.guideId?.name || 'Not assigned'}
                   </p>
                   <p style={{ fontSize: '14px', marginBottom: '4px' }}>
-                    <strong>Year:</strong> {problem.year}
+                    <strong>For:</strong> {problem.targetYear} Year Students
                   </p>
                   {guideFull && (
                     <p style={{ fontSize: '12px', color: '#e53e3e' }}>⚠️ Guide has max batches</p>
