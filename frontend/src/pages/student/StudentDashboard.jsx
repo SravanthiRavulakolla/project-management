@@ -5,7 +5,6 @@ import TeamMembers from './TeamMembers';
 import COEList from './COEList';
 import ProblemList from './ProblemList';
 import ProjectDetails from './ProjectDetails';
-import ProgressUpdates from './ProgressUpdates';
 import TimelineProgress from './TimelineProgress';
 import './StudentDashboard.css';
 
@@ -86,9 +85,6 @@ function StudentDashboard() {
             <button className={`tab ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>
               📅 Timeline & Submissions
             </button>
-            <button className={`tab ${activeTab === 'progress' ? 'active' : ''}`} onClick={() => setActiveTab('progress')}>
-              📝 Progress Updates
-            </button>
           </>
         )}
       </div>
@@ -118,10 +114,6 @@ function StudentDashboard() {
 
         {activeTab === 'timeline' && isAllotted && (
           <TimelineProgress batchId={batch._id} />
-        )}
-
-        {activeTab === 'progress' && isAllotted && (
-          <ProgressUpdates batchId={batch._id} />
         )}
       </div>
     </div>

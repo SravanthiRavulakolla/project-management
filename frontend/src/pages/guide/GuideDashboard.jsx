@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
 import BatchDetails from './BatchDetails';
 import SubmissionsReview from './SubmissionsReview';
+import GuideTimeline from './GuideTimeline';
 import './GuideDashboard.css';
 
 function GuideDashboard() {
@@ -10,6 +11,7 @@ function GuideDashboard() {
   const [coes, setCoes] = useState([]);
   const [batches, setBatches] = useState([]);
   const [optedTeams, setOptedTeams] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [showAddProblem, setShowAddProblem] = useState(false);
@@ -19,16 +21,18 @@ function GuideDashboard() {
 
   const fetchData = async () => {
     try {
-      const [problemsRes, coesRes, batchesRes, optedRes] = await Promise.all([
+      const [problemsRes, coesRes, batchesRes, optedRes, submissionsRes] = await Promise.all([
         api.getMyProblems(),
         api.getAllCOEs(),
         api.getMyBatches(),
-        api.getOptedTeams()
+        api.getOptedTeams(),
+        api.getGuideSubmissions()
       ]);
       setProblems(problemsRes.data.data);
       setCoes(coesRes.data.data);
       setBatches(batchesRes.data.data);
       setOptedTeams(optedRes.data.data);
+      setSubmissions(submissionsRes.data.data);
     } catch (error) {
       console.error('Failed to fetch data');
     } finally {
@@ -71,15 +75,8 @@ function GuideDashboard() {
     }
   };
 
-  const handleReject = async (batchId, problemId) => {
-    if (window.confirm('Reject this team request?')) {
-      try {
-        await api.rejectProblem(batchId, problemId);
-        fetchData();
-      } catch (error) {
-        alert('Failed to reject');
-      }
-    }
+  const getAcceptedSubmissionsCount = (batchId) => {
+    return submissions.filter(s => s.batchId._id === batchId && s.status === 'accepted').length;
   };
 
   if (loading) return <div className="loading">Loading...</div>;
@@ -103,7 +100,7 @@ function GuideDashboard() {
         <button className={`tab ${activeTab === 'problems' ? 'active' : ''}`} onClick={() => setActiveTab('problems')}>📋 My Problem Statements</button>
         <button className={`tab ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => setActiveTab('requests')}>⏳ Pending Requests ({optedTeams.length})</button>
         <button className={`tab ${activeTab === 'teams' ? 'active' : ''}`} onClick={() => setActiveTab('teams')}>👥 My Teams</button>
-        <button className={`tab ${activeTab === 'submissions' ? 'active' : ''}`} onClick={() => setActiveTab('submissions')}>📝 Review Submissions</button>
+        <button className={`tab ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>📅 Timeline</button>
       </div>
 
       {activeTab === 'problems' && (
@@ -191,6 +188,7 @@ function GuideDashboard() {
                   <h3>{b.teamName}</h3>
                   <p className="batch-leader">Leader: {b.leaderStudentId?.name}</p>
                   <p className="batch-problem">📋 {b.problemId?.title}</p>
+                  <p className="batch-submissions">✅ Accepted Submissions: {getAcceptedSubmissionsCount(b._id)}</p>
                   <div className="batch-action">View Details →</div>
                 </div>
               ))}
@@ -199,7 +197,7 @@ function GuideDashboard() {
         </div>
       )}
 
-      {activeTab === 'submissions' && <SubmissionsReview />}
+      {activeTab === 'timeline' && <GuideTimeline />}
     </div>
   );
 }
