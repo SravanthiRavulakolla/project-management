@@ -50,9 +50,12 @@ function Register() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <span className="auth-icon">📚</span>
-          <h1>Create Account</h1>
-          <p>Register as a Student (Team Leader)</p>
+          <span className="auth-icon">🎓</span>
+          <h1>G. Narayanamma Institute of Technology & Science</h1>
+          <p>Student Registration Portal</p>
+          <div style={{ marginTop: '8px', fontSize: '14px', color: 'var(--text-muted)' }}>
+            Mini Project Management System
+          </div>
         </div>
 
         {error && <div className="error-message">{error}</div>}

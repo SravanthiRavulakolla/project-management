@@ -40,8 +40,11 @@ function RegisterAdmin() {
       <div className="auth-card">
         <div className="auth-header">
           <span className="auth-icon">👑</span>
-          <h1>Admin Registration</h1>
-          <p>Register as Project Coordinator</p>
+          <h1>G. Narayanamma Institute of Technology & Science</h1>
+          <p>Admin Registration Portal</p>
+          <div style={{ marginTop: '8px', fontSize: '14px', color: 'var(--text-muted)' }}>
+            Project Coordinator Access
+          </div>
         </div>
 
         {error && <div className="error-message">{error}</div>}

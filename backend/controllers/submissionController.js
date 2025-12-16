@@ -23,6 +23,11 @@ exports.createOrUpdateSubmission = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Timeline event not found' });
     }
 
+    // Check if deadline has passed
+    if (new Date() > event.deadline) {
+      return res.status(400).json({ success: false, message: 'Submission deadline has passed' });
+    }
+
     let submission = await Submission.findOne({ batchId, timelineEventId });
 
     if (submission) {
@@ -163,6 +168,30 @@ exports.assignMarks = async (req, res) => {
     await submission.save();
 
     res.status(200).json({ success: true, data: submission });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get all submissions (Admin)
+// @route   GET /api/submissions
+exports.getAllSubmissions = async (req, res) => {
+  try {
+    const submissions = await Submission.find({})
+      .populate({
+        path: 'batchId',
+        select: 'teamName year branch section coeId teamMembers',
+        populate: {
+          path: 'teamMembers',
+          select: 'rollNumber name'
+        }
+      })
+      .populate('timelineEventId', 'title maxMarks deadline')
+      .populate('comments.guideId', 'name')
+      .populate('marksAssignedBy', 'name')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, data: submissions });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
 import BatchDetails from './BatchDetails';
-import SubmissionsReview from './SubmissionsReview';
 import GuideTimeline from './GuideTimeline';
 import './GuideDashboard.css';
 
@@ -100,7 +99,8 @@ function GuideDashboard() {
         <button className={`tab ${activeTab === 'problems' ? 'active' : ''}`} onClick={() => setActiveTab('problems')}>📋 My Problem Statements</button>
         <button className={`tab ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => setActiveTab('requests')}>⏳ Pending Requests ({optedTeams.length})</button>
         <button className={`tab ${activeTab === 'teams' ? 'active' : ''}`} onClick={() => setActiveTab('teams')}>👥 My Teams</button>
-        <button className={`tab ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>📅 Timeline</button>
+        <button className={`tab ${activeTab === 'submissions' ? 'active' : ''}`} onClick={() => setActiveTab('submissions')}>� Timeline</button>
+
       </div>
 
       {activeTab === 'problems' && (
@@ -197,7 +197,7 @@ function GuideDashboard() {
         </div>
       )}
 
-      {activeTab === 'timeline' && <GuideTimeline />}
+      {activeTab === 'submissions' && <GuideTimeline />}
     </div>
   );
 }

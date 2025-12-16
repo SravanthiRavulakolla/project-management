@@ -31,9 +31,12 @@ function Login() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <span className="auth-icon">📚</span>
-          <h1>Welcome Back</h1>
-          <p>Mini Project Management System</p>
+          <span className="auth-icon">🎓</span>
+          <h1>G. Narayanamma Institute of Technology & Science</h1>
+          <p>Mini Project Management Portal</p>
+          <div style={{ marginTop: '8px', fontSize: '14px', color: 'var(--text-muted)' }}>
+            Hyderabad • Autonomous • NBA Accredited
+          </div>
         </div>
 
         {error && <div className="error-message">{error}</div>}
@@ -62,9 +65,8 @@ function Login() {
           </div>
 
           <div className="form-group">
-            <label>Role (Optional - Auto-detect if empty)</label>
-            <select value={role} onChange={(e) => setRole(e.target.value)}>
-              <option value="">Auto-detect</option>
+            <label>Role</label>
+            <select value={role} onChange={(e) => setRole(e.target.value)} required>
               <option value="student">Student</option>
               <option value="guide">Guide</option>
               <option value="admin">Admin</option>

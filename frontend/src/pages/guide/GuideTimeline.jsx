@@ -7,7 +7,9 @@ function GuideTimeline() {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [selectedBatch, setSelectedBatch] = useState(null);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [comment, setComment] = useState('');
+  const [marks, setMarks] = useState('');
 
   const fetchData = async () => {
     try {
@@ -32,6 +34,35 @@ function GuideTimeline() {
     return submissions.filter(s => s.timelineEventId._id === eventId);
   };
 
+  const handleAddComment = async () => {
+    if (!comment.trim()) return;
+    try {
+      await api.addSubmissionComment(selectedSubmission._id, comment);
+      setComment('');
+      const res = await api.getSubmission(selectedSubmission._id);
+      setSelectedSubmission(res.data.data);
+      fetchData();
+    } catch (error) {
+      alert('Failed to add comment');
+    }
+  };
+
+  const handleAssignMarks = async (status) => {
+    if (!marks && status === 'accepted') {
+      alert('Please enter marks');
+      return;
+    }
+    try {
+      await api.assignSubmissionMarks(selectedSubmission._id, parseFloat(marks) || 0, status);
+      const res = await api.getSubmission(selectedSubmission._id);
+      setSelectedSubmission(res.data.data);
+      fetchData();
+      setMarks('');
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to assign marks');
+    }
+  };
+
   const getStatusBadge = (status) => {
     const colors = { not_started: 'secondary', submitted: 'info', under_review: 'warning', needs_revision: 'warning', accepted: 'success', rejected: 'danger' };
     const labels = { not_started: 'Not Started', submitted: 'Submitted', under_review: 'Under Review', needs_revision: 'Needs Revision', accepted: 'Accepted', rejected: 'Rejected' };
@@ -49,16 +80,16 @@ function GuideTimeline() {
 
   if (loading) return <div>Loading timeline...</div>;
 
-  if (selectedBatch) {
-    const submission = submissions.find(s => s.batchId._id === selectedBatch && s.timelineEventId._id === selectedEvent._id);
+  if (selectedSubmission) {
+    const submission = selectedSubmission;
     if (!submission) return <div>No submission found</div>;
 
     return (
       <div>
-        <button className="btn btn-secondary" onClick={() => setSelectedBatch(null)} style={{ marginBottom: '20px' }}>← Back to Batches</button>
+        <button className="btn btn-secondary" onClick={() => setSelectedSubmission(null)} style={{ marginBottom: '20px' }}>← Back to Submissions</button>
         
         <div className="card" style={{ marginBottom: '20px', borderLeft: '4px solid #667eea' }}>
-          <h2>{selectedEvent.title} - {batches.find(b => b._id === selectedBatch)?.teamName}</h2>
+          <h2>{selectedEvent.title} - {submission.batchId?.teamName}</h2>
           <p style={{ color: '#666' }}>{selectedEvent.description}</p>
           <div style={{ display: 'flex', gap: '20px', marginTop: '15px' }}>
             <span><strong>📅 Deadline:</strong> {new Date(selectedEvent.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
@@ -118,6 +149,23 @@ function GuideTimeline() {
                 ))}
               </div>
             )}
+            <div className="form-group">
+              <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} placeholder="Add feedback or revision comments..." />
+            </div>
+            <button className="btn btn-primary" onClick={handleAddComment}>Add Comment</button>
+          </div>
+        </div>
+
+        <div className="card" style={{ marginTop: '20px' }}>
+          <h3>🎯 Assign Marks</h3>
+          <p style={{ color: '#666', marginBottom: '15px' }}>Max Marks: {selectedEvent.maxMarks}</p>
+          {submission.marks !== null && (
+            <p style={{ color: '#22c55e', marginBottom: '15px' }}>✅ Current Marks: <strong>{submission.marks}/{selectedEvent.maxMarks}</strong></p>
+          )}
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <input type="number" value={marks} onChange={(e) => setMarks(e.target.value)} placeholder="Enter marks" style={{ width: '120px' }} min="0" max={selectedEvent.maxMarks} />
+            <button className="btn btn-primary" onClick={() => handleAssignMarks('accepted')}>✅ Accept & Assign</button>
+            <button className="btn btn-warning" onClick={() => handleAssignMarks('needs_revision')}>🔄 Request Revision</button>
           </div>
         </div>
       </div>
@@ -141,7 +189,7 @@ function GuideTimeline() {
           </div>
         </div>
 
-        <h3>Batches with Submissions</h3>
+        <h3>Team Submissions</h3>
         {eventSubmissions.length === 0 ? (
           <div className="card empty-state"><h3>No Submissions</h3><p>No teams have submitted for this event yet</p></div>
         ) : (
@@ -150,13 +198,14 @@ function GuideTimeline() {
               const batch = batchMap[sub.batchId._id];
               if (!batch) return null;
               return (
-                <div key={sub._id} className="card" style={{ cursor: 'pointer' }} onClick={() => setSelectedBatch(sub.batchId._id)}>
-                  <div className="batch-icon">👥</div>
+                <div key={sub._id} className="card" style={{ cursor: 'pointer' }} onClick={() => setSelectedSubmission(sub)}>
+                  <div className="batch-icon">📄</div>
                   <h3>{batch.teamName}</h3>
                   <p>{batch.year} Year • {batch.branch} • Section {batch.section}</p>
                   <p><strong>Status:</strong> {getStatusBadge(sub.status)}</p>
                   {sub.marks !== null && <p><strong>Marks:</strong> {sub.marks}/{selectedEvent.maxMarks}</p>}
-                  <div className="batch-action">View Submissions →</div>
+                  <p><strong>Versions:</strong> {sub.currentVersion}</p>
+                  <div className="batch-action">Review Submission →</div>
                 </div>
               );
             })}

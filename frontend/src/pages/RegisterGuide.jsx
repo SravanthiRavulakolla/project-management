@@ -41,8 +41,11 @@ function RegisterGuide() {
       <div className="auth-card">
         <div className="auth-header">
           <span className="auth-icon">👨‍🏫</span>
-          <h1>Guide Registration</h1>
-          <p>Register as an Internal Guide</p>
+          <h1>G. Narayanamma Institute of Technology & Science</h1>
+          <p>Guide Registration Portal</p>
+          <div style={{ marginTop: '8px', fontSize: '14px', color: 'var(--text-muted)' }}>
+            Internal Guide Access
+          </div>
         </div>
 
         {error && <div className="error-message">{error}</div>}

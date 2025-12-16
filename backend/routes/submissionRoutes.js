@@ -7,7 +7,8 @@ const {
   getBatchSubmissions,
   getGuideSubmissions,
   addComment,
-  assignMarks
+  assignMarks,
+  getAllSubmissions
 } = require('../controllers/submissionController');
 
 // Student routes
@@ -20,6 +21,7 @@ router.post('/:id/comment', protect, authorize('guide'), addComment);
 router.post('/:id/marks', protect, authorize('guide'), assignMarks);
 
 // General
+router.get('/', protect, authorize('admin'), getAllSubmissions);
 router.get('/:id', protect, getSubmission);
 
 module.exports = router;
