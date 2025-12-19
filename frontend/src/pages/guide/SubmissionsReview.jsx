@@ -40,12 +40,20 @@ function SubmissionsReview() {
       return;
     }
     try {
-      await api.assignSubmissionMarks(selectedSubmission._id, parseFloat(marks) || 0, status);
-      const res = await api.getSubmission(selectedSubmission._id);
-      setSelectedSubmission(res.data.data);
-      fetchSubmissions();
+      console.log('Assigning marks:', { submissionId: selectedSubmission._id, marks: parseFloat(marks) || 0, status });
+      const res = await api.assignSubmissionMarks(selectedSubmission._id, parseFloat(marks) || 0, status);
+      console.log('Marks assigned response:', res.data);
+      
+      // Refresh data after assignment
+      await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms for backend to sync
+      const updatedRes = await api.getSubmission(selectedSubmission._id);
+      setSelectedSubmission(updatedRes.data.data);
+      
+      // Also refresh the list
+      await fetchSubmissions();
       setMarks('');
     } catch (error) {
+      console.error('Error assigning marks:', error);
       alert(error.response?.data?.message || 'Failed to assign marks');
     }
   };

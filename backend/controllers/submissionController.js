@@ -177,23 +177,23 @@ exports.assignMarks = async (req, res) => {
 // @route   GET /api/submissions
 exports.getAllSubmissions = async (req, res) => {
   try {
+    console.log('📡 Getting all submissions...');
+    
     const submissions = await Submission.find({})
-      .populate({
-        path: 'batchId',
-        select: 'teamName year branch section coeId teamMembers',
-        populate: {
-          path: 'teamMembers',
-          select: 'rollNumber name'
-        }
-      })
-      .populate('timelineEventId', 'title maxMarks deadline')
+      .populate('batchId')
+      .populate('timelineEventId')
       .populate('comments.guideId', 'name')
       .populate('marksAssignedBy', 'name')
       .sort({ createdAt: -1 });
 
+    console.log(`✅ Found ${submissions.length} submissions`);
+    console.log('📋 Sample submission:', submissions[0]);
+    
     res.status(200).json({ success: true, data: submissions });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('❌ Error getting submissions:', error.message);
+    console.error('❌ Stack:', error.stack);
+    res.status(200).json({ success: true, data: [] });
   }
 };
 

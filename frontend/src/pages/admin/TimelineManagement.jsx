@@ -22,17 +22,67 @@ function TimelineManagement() {
 
   const fetchEvents = async () => {
     try {
-      const [eventsRes, batchesRes, submissionsRes] = await Promise.all([
-        api.getAllTimelineEvents(),
-        api.getAllBatches(),
-        api.getAllSubmissions()
-      ]);
-      setEvents(eventsRes.data.data);
-      setBatches(batchesRes.data.data);
-      setSubmissions(submissionsRes.data.data);
+      setLoading(true);
+      console.log('🔄 FETCH START: Getting timeline events...');
+      
+      let eventsData = [];
+      let batchesData = [];
+      let submissionsData = [];
+      
+      // Fetch events - CRITICAL
+      try {
+        console.log('📡 Calling api.getAllTimelineEvents()...');
+        const eventsRes = await api.getAllTimelineEvents();
+        console.log('📦 Raw eventsRes:', eventsRes);
+        
+        if (Array.isArray(eventsRes.data)) {
+          eventsData = eventsRes.data;
+        } else if (eventsRes.data?.data && Array.isArray(eventsRes.data.data)) {
+          eventsData = eventsRes.data.data;
+        }
+        console.log(`✅ EVENTS EXTRACTED: ${eventsData.length} events`);
+        console.log('📋 Events:', eventsData);
+      } catch (error) {
+        console.error('❌ EVENTS FETCH ERROR:', error.message);
+      }
+      
+      // Fetch batches
+      try {
+        console.log('📡 Calling api.getAllBatches()...');
+        const batchesRes = await api.getAllBatches();
+        batchesData = batchesRes.data?.data || batchesRes.data || [];
+        console.log(`✅ BATCHES EXTRACTED: ${batchesData.length} batches`);
+      } catch (error) {
+        console.error('⚠️ BATCHES FETCH ERROR:', error.message);
+      }
+      
+      // Fetch submissions - NOT CRITICAL
+      try {
+        console.log('📡 Calling api.getAllSubmissions()...');
+        const submissionsRes = await api.getAllSubmissions();
+        submissionsData = submissionsRes.data?.data || submissionsRes.data || [];
+        console.log(`✅ SUBMISSIONS EXTRACTED: ${submissionsData.length} submissions`);
+      } catch (error) {
+        console.error('⚠️ SUBMISSIONS FETCH ERROR (non-critical):', error.message);
+        // Don't fail completely, submissions are optional for viewing timeline
+      }
+      
+      // Set state
+      console.log('💾 Setting state with:', {
+        eventsCount: eventsData.length,
+        batchesCount: batchesData.length,
+        submissionsCount: submissionsData.length
+      });
+      
+      setEvents(eventsData);
+      setBatches(batchesData);
+      setSubmissions(submissionsData);
+      setLoading(false);
+      console.log('✅ FETCH COMPLETE');
+      
     } catch (error) {
-      console.error('Failed to fetch data');
-    } finally {
+      console.error('❌ FETCH ERROR:', error.message);
+      console.error('❌ Full error:', error);
       setLoading(false);
     }
   };
@@ -41,17 +91,23 @@ function TimelineManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Submitting form with data:', formData);
     try {
       if (editingEvent) {
+        console.log('Updating event:', editingEvent._id);
         await api.updateTimelineEvent(editingEvent._id, formData);
       } else {
+        console.log('Creating new event');
         await api.createTimelineEvent(formData);
       }
+      console.log('Event saved successfully');
       setShowForm(false);
       setEditingEvent(null);
       setFormData({ title: '', description: '', deadline: '', maxMarks: '', submissionRequirements: '', targetYear: 'all', order: 0 });
       fetchEvents();
     } catch (error) {
+      console.error('Failed to save event:', error);
+      console.error('Error response:', error.response);
       alert(error.response?.data?.message || 'Failed to save event');
     }
   };
@@ -89,13 +145,26 @@ function TimelineManagement() {
     return <span className="badge badge-success">Upcoming</span>;
   };
 
-  if (loading) return <div>Loading timeline...</div>;
+  if (loading) {
+    console.log('⏳ TimelineManagement: Loading...');
+    return <div className="card" style={{ padding: '40px', textAlign: 'center' }}>⏳ Loading timeline events...</div>;
+  }
+
+  console.log('🎯 TimelineManagement: Rendering. Events count:', events.length);
+  console.log('🎯 Events state:', events);
 
   return (
     <div className="tab-content">
       <div className="flex-between" style={{ marginBottom: '20px' }}>
         <h2>📅 Timeline Management</h2>
-        <button className="btn btn-primary" onClick={() => { setShowForm(true); setEditingEvent(null); setFormData({ title: '', description: '', deadline: '', maxMarks: '', submissionRequirements: '', targetYear: 'all', order: 0 }); }}>
+        <button className="btn btn-primary" onClick={() => { 
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const defaultDate = tomorrow.toISOString().split('T')[0];
+          setShowForm(true); 
+          setEditingEvent(null); 
+          setFormData({ title: '', description: '', deadline: defaultDate, maxMarks: '', submissionRequirements: '', targetYear: 'all', order: 0 }); 
+        }}>
           + Add Event
         </button>
       </div>
@@ -112,6 +181,7 @@ function TimelineManagement() {
               <div className="form-group">
                 <label>Deadline *</label>
                 <input type="date" value={formData.deadline} onChange={(e) => setFormData({...formData, deadline: e.target.value})} required />
+                <small style={{ color: '#666', fontSize: '12px' }}>Select a future date for the deadline</small>
               </div>
               <div className="form-group">
                 <label>Maximum Marks *</label>
@@ -214,9 +284,18 @@ function TimelineManagement() {
               </thead>
               <tbody>
                 {submissions
-                  .filter(sub => sub.timelineEventId._id === selectedEvent._id)
                   .filter(sub => {
-                    const batch = batches.find(b => b._id === sub.batchId._id);
+                    // Handle both string and object formats for timelineEventId
+                    const subEventId = typeof sub.timelineEventId === 'string' 
+                      ? sub.timelineEventId 
+                      : sub.timelineEventId?._id;
+                    return subEventId === selectedEvent._id;
+                  })
+                  .filter(sub => {
+                    const batchId = typeof sub.batchId === 'string' 
+                      ? sub.batchId 
+                      : sub.batchId?._id;
+                    const batch = batches.find(b => b._id === batchId);
                     if (!batch) return false;
                     if (filterYear && batch.year !== filterYear) return false;
                     if (filterBranch && batch.branch !== filterBranch) return false;
@@ -224,24 +303,24 @@ function TimelineManagement() {
                     return true;
                   })
                   .map(sub => {
-                    const batch = batches.find(b => b._id === sub.batchId._id);
+                    const batchId = typeof sub.batchId === 'string' 
+                      ? sub.batchId 
+                      : sub.batchId?._id;
+                    const batch = batches.find(b => b._id === batchId);
                     const latestVersion = sub.versions?.[sub.versions.length - 1];
+                    const latestComment = sub.comments?.length > 0 ? sub.comments[sub.comments.length - 1] : null;
                     return (
                       <tr key={sub._id}>
                         <td><strong>{batch?.teamName}</strong></td>
-                        <td>{batch?.teamMembers?.map(m => m.rollNumber).join(', ')}</td>
+                        <td>{batch?.teamMembers && batch.teamMembers.length > 0 ? batch.teamMembers.map(m => m.rollNo).join(', ') : '-'}</td>
                         <td>{batch?.year} {batch?.branch}-{batch?.section}</td>
-                        <td>{batch?.coeId?.name}</td>
+                        <td>{batch?.problemId?.coeId?.name ? batch.problemId.coeId.name : batch?.coeId?.name ? batch.coeId.name : '-'}</td>
                         <td>{getStatusBadge(sub.status)}</td>
                         <td>{sub.marks !== null ? `${sub.marks}/${selectedEvent.maxMarks}` : '-'}</td>
                         <td>
-                          {sub.comments?.length > 0 ? (
-                            <div style={{ maxHeight: '60px', overflowY: 'auto', fontSize: '12px' }}>
-                              {sub.comments.map((c, idx) => (
-                                <div key={idx} style={{ marginBottom: '5px' }}>
-                                  <strong>{c.guideId?.name}:</strong> {c.comment}
-                                </div>
-                              ))}
+                          {latestComment ? (
+                            <div style={{ fontSize: '12px' }}>
+                              <strong>{latestComment.guideId?.name}:</strong> {latestComment.comment}
                             </div>
                           ) : '-'}
                         </td>
@@ -261,10 +340,11 @@ function TimelineManagement() {
 
       {!selectedEvent && events.length === 0 ? (
         <div className="card empty-state">
-          <h3>No Timeline Events</h3>
+          <h3>❌ No Timeline Events</h3>
           <p>Create timeline events for Abstract Review, PRC-1, PRC-2, etc.</p>
+          <p style={{ fontSize: '12px', color: '#999' }}>Debug: Events state is empty. Length = {events.length}</p>
         </div>
-      ) : !selectedEvent && (
+      ) : !selectedEvent ? (
         <div className="timeline-container">
           {events.map((event, idx) => (
             <div key={event._id} className="card timeline-event" style={{ borderLeft: '4px solid #667eea', marginBottom: '15px' }}>
@@ -292,7 +372,7 @@ function TimelineManagement() {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

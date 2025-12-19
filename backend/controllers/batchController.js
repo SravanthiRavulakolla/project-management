@@ -7,14 +7,45 @@ const TeamMember = require('../models/TeamMember');
 // @route   GET /api/batches
 exports.getAllBatches = async (req, res) => {
   try {
-    const batches = await Batch.find()
+    let batches = await Batch.find()
       .populate('leaderStudentId', 'name email')
-      .populate('problemId', 'title description')
+      .populate('problemId')
       .populate('optedProblemId', 'title description')
       .populate('coeId', 'name')
       .populate('guideId', 'name email');
+    
+    // Manually populate nested COE for each problem
+    batches = await Promise.all(
+      batches.map(async (batch) => {
+        const batchObj = batch.toObject();
+        
+        // Populate problemId.coeId if it exists
+        if (batchObj.problemId && batchObj.problemId.coeId) {
+          const COE = require('../models/COE');
+          const coe = await COE.findById(batchObj.problemId.coeId).select('name');
+          if (coe) {
+            batchObj.problemId.coeId = coe;
+          }
+        }
+        
+        // Get team members for this batch
+        const teamMembers = await require('../models/TeamMember')
+          .find({ batchId: batch._id })
+          .select('name rollNo branch');
+        batchObj.teamMembers = teamMembers;
+        
+        return batchObj;
+      })
+    );
+    
+    console.log('📡 getAllBatches returning:', batches.length, 'batches');
+    if (batches.length > 0) {
+      console.log('📌 Sample batch problemId:', batches[0].problemId);
+      console.log('📌 Sample batch COE:', batches[0].problemId?.coeId?.name);
+    }
     res.status(200).json({ success: true, data: batches });
   } catch (error) {
+    console.error('Error getting batches:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

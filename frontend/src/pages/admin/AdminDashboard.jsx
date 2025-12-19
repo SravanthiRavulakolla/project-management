@@ -24,16 +24,21 @@ function AdminDashboard() {
 
   const fetchData = async () => {
     try {
+      console.log('AdminDashboard: Fetching data...');
       const [statsRes, coesRes, batchesRes] = await Promise.all([
         api.getAdminDashboard(),
         api.getAllCOEs(),
         api.getAllBatches()
       ]);
+      console.log('AdminDashboard: Stats:', statsRes.data.data);
+      console.log('AdminDashboard: COEs:', coesRes.data.data);
+      console.log('AdminDashboard: Batches:', batchesRes.data.data);
       setStats(statsRes.data.data);
       setCoes(coesRes.data.data);
       setBatches(batchesRes.data.data);
     } catch (error) {
-      console.error('Failed to fetch data');
+      console.error('AdminDashboard: Failed to fetch data:', error);
+      console.error('AdminDashboard: Error response:', error.response);
     } finally {
       setLoading(false);
     }
@@ -55,6 +60,8 @@ function AdminDashboard() {
   };
 
   if (loading) return <div className="loading">Loading...</div>;
+
+  console.log('AdminDashboard: Rendering with activeTab:', activeTab);
 
   const filteredBatches = getFilteredBatches();
 

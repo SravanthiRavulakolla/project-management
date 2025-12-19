@@ -13,17 +13,30 @@ function GuideTimeline() {
 
   const fetchData = async () => {
     try {
-      const [eventsRes, batchesRes, submissionsRes] = await Promise.all([
-        api.getAllTimelineEvents(),
-        api.getMyBatches(),
-        api.getGuideSubmissions()
-      ]);
-      setTimelineEvents(eventsRes.data.data);
-      setBatches(batchesRes.data.data);
-      setSubmissions(submissionsRes.data.data);
+      console.log('📡 GuideTimeline: Fetching data...');
+      
+      const eventsRes = await api.getAllTimelineEvents();
+      const batchesRes = await api.getMyBatches();
+      const submissionsRes = await api.getGuideSubmissions();
+      
+      // Extract data properly
+      const eventsData = eventsRes.data?.data || eventsRes.data || [];
+      const batchesData = batchesRes.data?.data || batchesRes.data || [];
+      const submissionsData = submissionsRes.data?.data || submissionsRes.data || [];
+      
+      console.log('✅ Events:', eventsData.length);
+      console.log('✅ Batches:', batchesData.length);
+      console.log('✅ Submissions:', submissionsData.length);
+      
+      setTimelineEvents(eventsData);
+      setBatches(batchesData);
+      setSubmissions(submissionsData);
+      setLoading(false);
     } catch (error) {
-      console.error('Failed to fetch data');
-    } finally {
+      console.error('❌ Failed to fetch data:', error.message);
+      setTimelineEvents([]);
+      setBatches([]);
+      setSubmissions([]);
       setLoading(false);
     }
   };
@@ -31,7 +44,13 @@ function GuideTimeline() {
   useEffect(() => { fetchData(); }, []);
 
   const getSubmissionsForEvent = (eventId) => {
-    return submissions.filter(s => s.timelineEventId._id === eventId);
+    return submissions.filter(s => {
+      // Handle both object and string formats for timelineEventId
+      const subEventId = typeof s.timelineEventId === 'string' 
+        ? s.timelineEventId 
+        : s.timelineEventId?._id;
+      return subEventId === eventId;
+    });
   };
 
   const handleAddComment = async () => {
