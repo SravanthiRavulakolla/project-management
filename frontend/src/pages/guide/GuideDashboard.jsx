@@ -162,7 +162,7 @@ function GuideDashboard() {
                   <p style={{ color: '#667eea', fontWeight: '500', marginBottom: '10px' }}>
                     {t.year} Year • {t.branch} • Section {t.section}
                   </p>
-                  <p><strong>Leader:</strong> {t.leaderStudentId?.name} ({t.leaderStudentId?.email})</p>
+                  <p><strong>Leader:</strong> {t.leaderStudentId?.name}</p>
                   <p><strong>Opted Problem:</strong> {t.optedProblemId?.title}</p>
                   <p><strong>COE:</strong> {t.coeId?.name}</p>
                   <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>

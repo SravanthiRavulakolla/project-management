@@ -12,6 +12,7 @@ function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [rollNumber, setRollNumber] = useState('');
   const [year, setYear] = useState('');
   const [branch, setBranch] = useState('');
   const [section, setSection] = useState('');
@@ -29,6 +30,11 @@ function Register() {
       return;
     }
 
+    if (!rollNumber) {
+      setError('Please enter your roll number');
+      return;
+    }
+
     if (!year || !branch || !section) {
       setError('Please select year, branch, and section');
       return;
@@ -37,7 +43,7 @@ function Register() {
     setLoading(true);
 
     try {
-      await register(name, email, password, 'student', { year, branch, section });
+      await register(name, email, password, 'student', { rollNumber, year, branch, section });
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -79,6 +85,17 @@ function Register() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Roll Number</label>
+            <input
+              type="text"
+              value={rollNumber}
+              onChange={(e) => setRollNumber(e.target.value.toUpperCase())}
+              placeholder="e.g., 22A81A0X01"
               required
             />
           </div>

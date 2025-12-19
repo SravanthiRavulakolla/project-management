@@ -20,6 +20,12 @@ const StudentSchema = new mongoose.Schema({
     minlength: 6,
     select: false
   },
+  rollNumber: {
+    type: String,
+    required: [true, 'Roll number is required'],
+    trim: true,
+    unique: true
+  },
   year: {
     type: String,
     enum: ['2nd', '3rd', '4th'],

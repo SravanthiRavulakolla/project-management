@@ -20,6 +20,12 @@ function TimelineManagement() {
   const [filterBranch, setFilterBranch] = useState('');
   const [filterSection, setFilterSection] = useState('');
 
+  // Admin remarks state
+  const [showRemarkModal, setShowRemarkModal] = useState(false);
+  const [selectedSubmissionForRemark, setSelectedSubmissionForRemark] = useState(null);
+  const [remarkText, setRemarkText] = useState('');
+  const [expandedRemarkSubmission, setExpandedRemarkSubmission] = useState(null);
+
   const fetchEvents = async () => {
     try {
       setLoading(true);
@@ -227,9 +233,14 @@ function TimelineManagement() {
             </div>
           </div>
 
-          {/* Filters */}
+          {/* Filters & Download */}
           <div className="card" style={{ marginBottom: '20px' }}>
-            <h3>🔍 Filters</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3>🔍 Filters</h3>
+              <button className="btn btn-success" onClick={() => downloadReportAsCSV()}>
+                📥 Download Report (CSV)
+              </button>
+            </div>
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
               <div className="form-group" style={{ margin: 0 }}>
                 <label>Year</label>
@@ -273,7 +284,7 @@ function TimelineManagement() {
               <thead>
                 <tr>
                   <th>Team</th>
-                  <th>Team Details</th>
+                  <th>Team Members</th>
                   <th>Class</th>
                   <th>COE</th>
                   <th>Status</th>
@@ -308,26 +319,85 @@ function TimelineManagement() {
                       : sub.batchId?._id;
                     const batch = batches.find(b => b._id === batchId);
                     const latestVersion = sub.versions?.[sub.versions.length - 1];
-                    const latestComment = sub.comments?.length > 0 ? sub.comments[sub.comments.length - 1] : null;
+                    const latestAdminRemark = sub.adminRemarks?.length > 0 ? sub.adminRemarks[sub.adminRemarks.length - 1] : null;
+                    
+                    // Debug: Log the batch data to see what we're getting
+                    if (batch && batch.teamName) {
+                      console.log(`📦 Batch ${batch.teamName}:`, {
+                        leaderName: batch.leaderStudentId?.name,
+                        leaderRollNumber: batch.leaderStudentId?.rollNumber,
+                        leaderStudentIdFull: batch.leaderStudentId,
+                        teamMembers: batch.teamMembers
+                      });
+                    }
+                    
+                    // Combine leader and team members
+                    const leaderRollNo = batch?.leaderStudentId?.rollNumber || '-';
+                    const otherMembers = batch?.teamMembers && batch.teamMembers.length > 0 
+                      ? batch.teamMembers.map(m => m.rollNo).join(', ') 
+                      : '';
+                    const allMembers = otherMembers ? `${leaderRollNo}, ${otherMembers}` : leaderRollNo;
+                    
+                    // Debug COE resolution
+                    let coeDisplay = '-';
+                    if (batch?.problemId?.coeId?.name) {
+                      coeDisplay = batch.problemId.coeId.name;
+                      console.log(`✅ COE from problemId.coeId: ${coeDisplay} (Batch: ${batch.teamName})`);
+                    } else if (batch?.coeId?.name) {
+                      coeDisplay = batch.coeId.name;
+                      console.log(`✅ COE from batch.coeId: ${coeDisplay} (Batch: ${batch.teamName})`);
+                    } else {
+                      console.log(`⚠️ No COE found - problemId:`, batch?.problemId, `- coeId:`, batch?.coeId, `(Batch: ${batch?.teamName})`);
+                    }
+                    
                     return (
                       <tr key={sub._id}>
                         <td><strong>{batch?.teamName}</strong></td>
-                        <td>{batch?.teamMembers && batch.teamMembers.length > 0 ? batch.teamMembers.map(m => m.rollNo).join(', ') : '-'}</td>
+                        <td>{allMembers}</td>
                         <td>{batch?.year} {batch?.branch}-{batch?.section}</td>
-                        <td>{batch?.problemId?.coeId?.name ? batch.problemId.coeId.name : batch?.coeId?.name ? batch.coeId.name : '-'}</td>
+                        <td>{coeDisplay}</td>
                         <td>{getStatusBadge(sub.status)}</td>
                         <td>{sub.marks !== null ? `${sub.marks}/${selectedEvent.maxMarks}` : '-'}</td>
                         <td>
-                          {latestComment ? (
-                            <div style={{ fontSize: '12px' }}>
-                              <strong>{latestComment.guideId?.name}:</strong> {latestComment.comment}
+                          {latestAdminRemark ? (
+                            <div 
+                              style={{ 
+                                fontSize: '12px', 
+                                cursor: 'pointer',
+                                padding: '8px',
+                                background: '#f0f0f0',
+                                borderRadius: '4px',
+                                maxHeight: '50px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                              onClick={() => setExpandedRemarkSubmission(sub._id)}
+                              title="Click to expand"
+                            >
+                              <strong>Admin:</strong> {latestAdminRemark.remark.substring(0, 50)}...
+                              <br/>
+                              <small style={{ color: '#999' }}>
+                                {new Date(latestAdminRemark.createdAt).toLocaleDateString('en-IN')}
+                              </small>
                             </div>
-                          ) : '-'}
+                          ) : (
+                            <span style={{ color: '#999', fontSize: '12px' }}>No remarks</span>
+                          )}
                         </td>
                         <td>
-                          {latestVersion?.fileUrl && (
-                            <a href={latestVersion.fileUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">📁 View File</a>
-                          )}
+                          <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                            {latestVersion?.fileUrl && (
+                              <a href={latestVersion.fileUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">📁 View</a>
+                            )}
+                            <button 
+                              className="btn btn-info btn-sm" 
+                              onClick={() => { setSelectedSubmissionForRemark(sub); setShowRemarkModal(true); }}
+                              title="Add Admin Remark"
+                            >
+                              💬 Remark
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -373,8 +443,184 @@ function TimelineManagement() {
           ))}
         </div>
       ) : null}
+
+      {/* Expanded Remark Modal */}
+      {expandedRemarkSubmission && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div className="card" style={{ width: '90%', maxWidth: '600px', maxHeight: '80vh', overflow: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3>📝 Full Feedback</h3>
+              <button 
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  fontSize: '24px', 
+                  cursor: 'pointer',
+                  color: '#999'
+                }}
+                onClick={() => setExpandedRemarkSubmission(null)}
+              >
+                ×
+              </button>
+            </div>
+            {(() => {
+              const submission = submissions.find(s => s._id === expandedRemarkSubmission);
+              const latestRemark = submission?.adminRemarks?.length > 0 ? submission.adminRemarks[submission.adminRemarks.length - 1] : null;
+              if (!latestRemark) return null;
+              
+              return (
+                <div>
+                  <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
+                    <div style={{ fontSize: '12px', color: '#667eea', fontWeight: 'bold', marginBottom: '8px' }}>
+                      📅 {new Date(latestRemark.createdAt).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </div>
+                    <p style={{ color: '#2d3748', fontSize: '14px', lineHeight: '1.6', whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+                      {latestRemark.remark}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+            <button 
+              className="btn btn-secondary"
+              onClick={() => setExpandedRemarkSubmission(null)}
+              style={{ width: '100%' }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Remark Modal */}
+      {showRemarkModal && selectedSubmissionForRemark && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="card" style={{ width: '90%', maxWidth: '500px' }}>
+            <h3>Add Admin Remark</h3>
+            <div style={{ marginBottom: '15px', padding: '10px', background: '#f0f0f0', borderRadius: '5px' }}>
+              <strong>Team:</strong> {batches.find(b => b._id === (typeof selectedSubmissionForRemark.batchId === 'string' ? selectedSubmissionForRemark.batchId : selectedSubmissionForRemark.batchId?._id))?.teamName}
+            </div>
+            <textarea
+              value={remarkText}
+              onChange={(e) => setRemarkText(e.target.value)}
+              placeholder="Enter your remark here..."
+              rows={5}
+              style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '5px', border: '1px solid #ddd' }}
+            />
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                className="btn btn-primary"
+                onClick={async () => {
+                  try {
+                    if (!remarkText.trim()) {
+                      alert('Please enter a remark');
+                      return;
+                    }
+                    await api.addAdminRemark(selectedSubmissionForRemark._id, remarkText);
+                    setRemarkText('');
+                    setShowRemarkModal(false);
+                    setSelectedSubmissionForRemark(null);
+                    fetchEvents();
+                    alert('Remark added successfully!');
+                  } catch (error) {
+                    console.error('Error adding remark:', error);
+                    alert('Failed to add remark');
+                  }
+                }}
+              >
+                Save Remark
+              </button>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  setRemarkText('');
+                  setShowRemarkModal(false);
+                  setSelectedSubmissionForRemark(null);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+
+  // Download report as CSV function
+  async function downloadReportAsCSV() {
+    if (!selectedEvent || submissions.length === 0) {
+      alert('No submissions to download');
+      return;
+    }
+
+    // Filter submissions for current event
+    const eventSubmissions = submissions.filter(sub => {
+      const subEventId = typeof sub.timelineEventId === 'string' 
+        ? sub.timelineEventId 
+        : sub.timelineEventId?._id;
+      return subEventId === selectedEvent._id;
+    });
+
+    if (eventSubmissions.length === 0) {
+      alert('No submissions to download');
+      return;
+    }
+
+    // Prepare CSV data
+    let csvContent = 'data:text/csv;charset=utf-8,';
+    csvContent += `Timeline Event: ${selectedEvent.title}\n`;
+    csvContent += `Generated on: ${new Date().toLocaleDateString('en-IN')}\n`;
+    csvContent += `Deadline: ${new Date(selectedEvent.deadline).toLocaleDateString('en-IN')}\n`;
+    csvContent += `Max Marks: ${selectedEvent.maxMarks}\n\n`;
+
+    // Header row
+    const headers = ['Team Name', 'Team Members', 'Year', 'Branch', 'Section', 'COE', 'Status', 'Marks', 'Admin Remarks'];
+    csvContent += headers.map(h => `"${h}"`).join(',') + '\n';
+
+    // Data rows
+    eventSubmissions.forEach(sub => {
+      const batchId = typeof sub.batchId === 'string' 
+        ? sub.batchId 
+        : sub.batchId?._id;
+      const batch = batches.find(b => b._id === batchId);
+      const latestAdminRemark = sub.adminRemarks?.length > 0 ? sub.adminRemarks[sub.adminRemarks.length - 1].remark : 'N/A';
+      const leaderRollNo = batch?.leaderStudentId?.rollNumber || 'N/A';
+      const otherMembers = batch?.teamMembers?.length > 0 ? batch.teamMembers.map(m => m.rollNo).join('; ') : '';
+      const allMembers = otherMembers ? `${leaderRollNo}; ${otherMembers}` : leaderRollNo;
+      const coe = batch?.problemId?.coeId?.name || batch?.coeId?.name || 'N/A';
+
+      const row = [
+        batch?.teamName || 'Unknown',
+        allMembers,
+        batch?.year || 'N/A',
+        batch?.branch || 'N/A',
+        batch?.section || 'N/A',
+        coe,
+        sub.status || 'N/A',
+        sub.marks !== null ? `${sub.marks}/${selectedEvent.maxMarks}` : 'N/A',
+        `"${latestAdminRemark.replace(/"/g, '""')}"`
+      ];
+      csvContent += row.join(',') + '\n';
+    });
+
+    // Create download link
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `${selectedEvent.title}_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 }
 
 export default TimelineManagement;

@@ -67,7 +67,7 @@ function BatchDetails({ batchId, onBack }) {
         <div className="flex-between">
           <div>
             <h2 style={{ color: '#2d3748', marginBottom: '8px' }}>👥 {batch.teamName}</h2>
-            <p style={{ color: '#718096' }}>Leader: {batch.leaderStudentId?.name} ({batch.leaderStudentId?.email})</p>
+            <p style={{ color: '#718096' }}>Leader: {batch.leaderStudentId?.name}</p>
           </div>
           <div>
             <label style={{ fontSize: '14px', color: '#718096', display: 'block', marginBottom: '8px' }}>Update Status:</label>
@@ -94,9 +94,14 @@ function BatchDetails({ batchId, onBack }) {
 
         <div className="card">
           <h3 style={{ marginBottom: '16px', color: '#2d3748' }}>👥 Team Members</h3>
-          {batch.teamMembers?.length > 0 ? (
+          {batch.leaderStudentId || batch.teamMembers?.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {batch.teamMembers.map((member) => (
+              {batch.leaderStudentId && (
+                <div style={{ background: '#e6f2ff', padding: '8px 12px', borderRadius: '8px', fontSize: '14px', borderLeft: '3px solid #667eea' }}>
+                  <strong>{batch.leaderStudentId.name}</strong> - {batch.leaderStudentId.rollNumber}
+                </div>
+              )}
+              {batch.teamMembers?.map((member) => (
                 <div key={member._id} style={{ background: '#f7fafc', padding: '8px 12px', borderRadius: '8px', fontSize: '14px' }}>
                   <strong>{member.name}</strong> - {member.rollNo} ({member.branch})
                 </div>

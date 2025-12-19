@@ -7,20 +7,25 @@ const generateToken = require('../utils/generateToken');
 // @route   POST /api/auth/register/student
 exports.registerStudent = async (req, res) => {
   try {
-    const { name, email, password, year, branch, section } = req.body;
+    const { name, email, password, rollNumber, year, branch, section } = req.body;
 
     const existingStudent = await Student.findOne({ email });
     if (existingStudent) {
       return res.status(400).json({ success: false, message: 'Email already exists' });
     }
 
-    const student = await Student.create({ name, email, password, year, branch, section });
+    const existingRollNumber = await Student.findOne({ rollNumber });
+    if (existingRollNumber) {
+      return res.status(400).json({ success: false, message: 'Roll number already exists' });
+    }
+
+    const student = await Student.create({ name, email, password, rollNumber, year, branch, section });
     const token = generateToken(student._id, 'student');
 
     res.status(201).json({
       success: true,
       token,
-      user: { id: student._id, name: student.name, email: student.email, role: 'student', year, branch, section }
+      user: { id: student._id, name: student.name, email: student.email, rollNumber: student.rollNumber, role: 'student', year, branch, section }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

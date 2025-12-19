@@ -17,6 +17,23 @@ const CommentSchema = new mongoose.Schema({
   }
 });
 
+const AdminRemarkSchema = new mongoose.Schema({
+  adminId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin',
+    required: true
+  },
+  remark: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
 const VersionSchema = new mongoose.Schema({
   version: {
     type: Number,
@@ -62,6 +79,7 @@ const SubmissionSchema = new mongoose.Schema({
     default: 'not_started'
   },
   comments: [CommentSchema],
+  adminRemarks: [AdminRemarkSchema],
   marks: {
     type: Number,
     default: null

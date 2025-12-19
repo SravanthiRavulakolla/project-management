@@ -8,7 +8,8 @@ const {
   getGuideSubmissions,
   addComment,
   assignMarks,
-  getAllSubmissions
+  getAllSubmissions,
+  addAdminRemark
 } = require('../controllers/submissionController');
 
 // Student routes
@@ -19,6 +20,9 @@ router.get('/batch/:batchId', protect, getBatchSubmissions);
 router.get('/guide', protect, authorize('guide'), getGuideSubmissions);
 router.post('/:id/comment', protect, authorize('guide'), addComment);
 router.post('/:id/marks', protect, authorize('guide'), assignMarks);
+
+// Admin routes
+router.post('/:id/admin-remark', protect, authorize('admin'), addAdminRemark);
 
 // General
 router.get('/', protect, authorize('admin'), getAllSubmissions);

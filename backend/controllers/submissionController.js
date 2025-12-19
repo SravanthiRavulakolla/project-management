@@ -183,6 +183,7 @@ exports.getAllSubmissions = async (req, res) => {
       .populate('batchId')
       .populate('timelineEventId')
       .populate('comments.guideId', 'name')
+      .populate('adminRemarks.adminId', 'name')
       .populate('marksAssignedBy', 'name')
       .sort({ createdAt: -1 });
 
@@ -194,6 +195,34 @@ exports.getAllSubmissions = async (req, res) => {
     console.error('❌ Error getting submissions:', error.message);
     console.error('❌ Stack:', error.stack);
     res.status(200).json({ success: true, data: [] });
+  }
+};
+
+// @desc    Add remark to submission (Admin only)
+// @route   POST /api/submissions/:id/admin-remark
+exports.addAdminRemark = async (req, res) => {
+  try {
+    const { remark } = req.body;
+    const submission = await Submission.findById(req.params.id);
+
+    if (!submission) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+
+    submission.adminRemarks.push({
+      adminId: req.user._id,
+      remark,
+      createdAt: new Date()
+    });
+    await submission.save();
+
+    const updated = await Submission.findById(req.params.id)
+      .populate('adminRemarks.adminId', 'name')
+      .populate('comments.guideId', 'name');
+    
+    res.status(200).json({ success: true, data: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

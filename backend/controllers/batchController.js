@@ -8,24 +8,31 @@ const TeamMember = require('../models/TeamMember');
 exports.getAllBatches = async (req, res) => {
   try {
     let batches = await Batch.find()
-      .populate('leaderStudentId', 'name email')
-      .populate('problemId')
+      .populate('leaderStudentId', 'name rollNumber email')
+      .populate({
+        path: 'problemId',
+        select: 'title description coeId guideId targetYear',
+        populate: { 
+          path: 'coeId', 
+          select: 'name'
+        }
+      })
       .populate('optedProblemId', 'title description')
       .populate('coeId', 'name')
       .populate('guideId', 'name email');
     
-    // Manually populate nested COE for each problem
+    // Get team members for each batch
     batches = await Promise.all(
       batches.map(async (batch) => {
         const batchObj = batch.toObject();
         
-        // Populate problemId.coeId if it exists
+        // Ensure problemId.coeId is properly set
         if (batchObj.problemId && batchObj.problemId.coeId) {
-          const COE = require('../models/COE');
-          const coe = await COE.findById(batchObj.problemId.coeId).select('name');
-          if (coe) {
-            batchObj.problemId.coeId = coe;
-          }
+          console.log('✅ Found COE in problemId:', batchObj.problemId.coeId);
+        } else if (batchObj.coeId) {
+          console.log('✅ Found COE in batch.coeId:', batchObj.coeId);
+        } else {
+          console.log('⚠️ No COE found for batch:', batchObj.teamName);
         }
         
         // Get team members for this batch
@@ -40,8 +47,17 @@ exports.getAllBatches = async (req, res) => {
     
     console.log('📡 getAllBatches returning:', batches.length, 'batches');
     if (batches.length > 0) {
-      console.log('📌 Sample batch problemId:', batches[0].problemId);
-      console.log('📌 Sample batch COE:', batches[0].problemId?.coeId?.name);
+      console.log('📌 Sample batch:', {
+        teamName: batches[0].teamName,
+        leaderName: batches[0].leaderStudentId?.name,
+        leaderRollNumber: batches[0].leaderStudentId?.rollNumber,
+        leaderStudentId: JSON.stringify(batches[0].leaderStudentId),
+        teamMembers: batches[0].teamMembers?.map(m => ({ name: m.name, rollNo: m.rollNo })),
+        problemId: batches[0].problemId?._id,
+        problemTitle: batches[0].problemId?.title,
+        coeFromProblem: batches[0].problemId?.coeId,
+        coeFromBatch: batches[0].coeId
+      });
     }
     res.status(200).json({ success: true, data: batches });
   } catch (error) {
@@ -55,10 +71,21 @@ exports.getAllBatches = async (req, res) => {
 exports.getMyBatch = async (req, res) => {
   try {
     const batch = await Batch.findOne({ leaderStudentId: req.user._id })
-      .populate('leaderStudentId', 'name email')
-      .populate('problemId', 'title description coeId datasetUrl')
-      .populate('optedProblemId', 'title description')
-      .populate('optedProblems.problemId', 'title description')
+      .populate('leaderStudentId', 'name email rollNumber')
+      .populate({
+        path: 'problemId',
+        select: 'title description coeId datasetUrl',
+        populate: { path: 'coeId', select: 'name' }
+      })
+      .populate({
+        path: 'optedProblemId',
+        select: 'title description coeId',
+        populate: { path: 'coeId', select: 'name' }
+      })
+      .populate({
+        path: 'optedProblems.problemId',
+        select: 'title description coeId'
+      })
       .populate('optedProblems.coeId', 'name')
       .populate('coeId', 'name')
       .populate('guideId', 'name email');
@@ -170,8 +197,16 @@ exports.selectProblem = async (req, res) => {
 
     const updatedBatch = await Batch.findById(batch._id)
       .populate('leaderStudentId', 'name email')
-      .populate('optedProblemId', 'title description')
-      .populate('optedProblems.problemId', 'title description')
+      .populate({
+        path: 'optedProblemId',
+        select: 'title description coeId',
+        populate: { path: 'coeId', select: 'name' }
+      })
+      .populate({
+        path: 'optedProblems.problemId',
+        select: 'title description coeId',
+        populate: { path: 'coeId', select: 'name' }
+      })
       .populate('coeId', 'name');
 
     res.status(200).json({ success: true, data: updatedBatch, message: 'Problem opted successfully. Waiting for guide approval.' });
@@ -345,7 +380,11 @@ exports.allotProblem = async (req, res) => {
 
     const updatedBatch = await Batch.findById(batch._id)
       .populate('leaderStudentId', 'name email')
-      .populate('problemId', 'title description')
+      .populate({
+        path: 'problemId',
+        select: 'title description coeId',
+        populate: { path: 'coeId', select: 'name' }
+      })
       .populate('coeId', 'name')
       .populate('guideId', 'name email');
 
