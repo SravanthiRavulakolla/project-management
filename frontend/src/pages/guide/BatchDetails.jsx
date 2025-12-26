@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
 
+const YEAR_LABELS = {
+  '2nd': '2nd - Real Time Project',
+  '3rd': '3rd - Mini Project',
+  '4th': '4th - Major Project'
+};
+
 function BatchDetails({ batchId, onBack }) {
   const [batch, setBatch] = useState(null);
   const [updates, setUpdates] = useState([]);
@@ -68,6 +74,7 @@ function BatchDetails({ batchId, onBack }) {
           <div>
             <h2 style={{ color: '#2d3748', marginBottom: '8px' }}>👥 {batch.teamName}</h2>
             <p style={{ color: '#718096' }}>Leader: {batch.leaderStudentId?.name}</p>
+            <p style={{ color: '#667eea', fontWeight: '500', fontSize: '14px' }}>{batch.year ? YEAR_LABELS[batch.year] : 'Year Not Set'}</p>
           </div>
           <div>
             <label style={{ fontSize: '14px', color: '#718096', display: 'block', marginBottom: '8px' }}>Update Status:</label>
@@ -98,72 +105,20 @@ function BatchDetails({ batchId, onBack }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {batch.leaderStudentId && (
                 <div style={{ background: '#e6f2ff', padding: '8px 12px', borderRadius: '8px', fontSize: '14px', borderLeft: '3px solid #667eea' }}>
-                  <strong>{batch.leaderStudentId.name}</strong> - {batch.leaderStudentId.rollNumber}
+                  <strong>{batch.leaderStudentId.name}</strong> - {batch.leaderStudentId.rollNumber || batch.leaderStudentId.rollNo || 'N/A'} ({batch.branch || 'N/A'}-{batch.section || 'N/A'})
                 </div>
               )}
               {batch.teamMembers?.map((member) => (
                 <div key={member._id} style={{ background: '#f7fafc', padding: '8px 12px', borderRadius: '8px', fontSize: '14px' }}>
-                  <strong>{member.name}</strong> - {member.rollNo} ({member.branch})
+                  <strong>{member.name}</strong> - {member.rollNo} ({batch.branch || 'N/A'}-{batch.section || 'N/A'})
                 </div>
-              ))}
+              ))}}
             </div>
           ) : (
             <p style={{ color: '#718096' }}>No team members added</p>
           )}
         </div>
       </div>
-
-      <h3 style={{ color: 'white', marginBottom: '16px' }}>📝 Progress Updates</h3>
-      {updates.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
-          <p style={{ color: '#718096' }}>No progress updates yet</p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {updates.map((update) => (
-            <div key={update._id} className="card">
-              <div className="flex-between" style={{ marginBottom: '12px' }}>
-                <span style={{ color: '#718096', fontSize: '14px' }}>
-                  📅 {new Date(update.date).toLocaleDateString()}
-                </span>
-                {update.fileUrl && (
-                  <a href={update.fileUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ fontSize: '12px', padding: '6px 12px' }}>
-                    📁 View File
-                  </a>
-                )}
-              </div>
-              <p style={{ color: '#2d3748', marginBottom: '16px' }}>{update.description}</p>
-
-              {update.commentThread?.map((comment, idx) => (
-                <div key={idx} style={{ background: '#e8f5e9', padding: '12px', borderRadius: '8px', marginBottom: '8px', borderLeft: '4px solid #38a169' }}>
-                  <div style={{ fontSize: '12px', color: '#38a169', fontWeight: '600', marginBottom: '4px' }}>
-                    You • {new Date(comment.date).toLocaleDateString()}
-                  </div>
-                  <p style={{ color: '#2d3748', fontSize: '14px' }}>{comment.comment}</p>
-                </div>
-              ))}
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                <input
-                  type="text"
-                  placeholder="Add a comment..."
-                  value={newComment[update._id] || ''}
-                  onChange={(e) => setNewComment({ ...newComment, [update._id]: e.target.value })}
-                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '2px solid #e2e8f0' }}
-                />
-                <button 
-                  className="btn btn-primary" 
-                  onClick={() => handleAddComment(update._id)}
-                  disabled={submitting === update._id}
-                  style={{ padding: '10px 20px' }}
-                >
-                  {submitting === update._id ? '...' : 'Comment'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

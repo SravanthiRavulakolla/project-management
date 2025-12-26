@@ -135,7 +135,12 @@ exports.addComment = async (req, res) => {
       comment,
       createdAt: new Date()
     });
-    submission.status = 'needs_revision';
+    
+    // Only update status to needs_revision if it's not already accepted or rejected
+    if (submission.status !== 'accepted' && submission.status !== 'rejected') {
+      submission.status = 'needs_revision';
+    }
+    
     await submission.save();
 
     const updated = await Submission.findById(req.params.id).populate('comments.guideId', 'name');

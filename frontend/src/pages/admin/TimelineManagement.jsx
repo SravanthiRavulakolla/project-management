@@ -287,7 +287,7 @@ function TimelineManagement() {
                   <th>Team Members</th>
                   <th>Class</th>
                   <th>COE</th>
-                  <th>Status</th>
+                  <th>Guide</th>
                   <th>Marks</th>
                   <th>Remarks</th>
                   <th>Actions</th>
@@ -332,31 +332,37 @@ function TimelineManagement() {
                     }
                     
                     // Combine leader and team members
-                    const leaderRollNo = batch?.leaderStudentId?.rollNumber || '-';
-                    const otherMembers = batch?.teamMembers && batch.teamMembers.length > 0 
-                      ? batch.teamMembers.map(m => m.rollNo).join(', ') 
-                      : '';
-                    const allMembers = otherMembers ? `${leaderRollNo}, ${otherMembers}` : leaderRollNo;
-                    
-                    // Debug COE resolution
-                    let coeDisplay = '-';
-                    if (batch?.problemId?.coeId?.name) {
-                      coeDisplay = batch.problemId.coeId.name;
-                      console.log(`✅ COE from problemId.coeId: ${coeDisplay} (Batch: ${batch.teamName})`);
-                    } else if (batch?.coeId?.name) {
-                      coeDisplay = batch.coeId.name;
-                      console.log(`✅ COE from batch.coeId: ${coeDisplay} (Batch: ${batch.teamName})`);
-                    } else {
-                      console.log(`⚠️ No COE found - problemId:`, batch?.problemId, `- coeId:`, batch?.coeId, `(Batch: ${batch?.teamName})`);
-                    }
+                    const leader = batch?.leaderStudentId;
+                    const members = batch?.teamMembers || [];
                     
                     return (
                       <tr key={sub._id}>
                         <td><strong>{batch?.teamName}</strong></td>
-                        <td>{allMembers}</td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {leader && (
+                              <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#2d3748' }}>
+                                👑 {leader.rollNumber || leader.name}
+                              </div>
+                            )}
+                            {members.map((m, idx) => (
+                              <div key={idx} style={{ fontSize: '12px', color: '#4a5568', paddingLeft: '18px' }}>
+                                • {m.rollNo}
+                              </div>
+                            ))}
+                          </div>
+                        </td>
                         <td>{batch?.year} {batch?.branch}-{batch?.section}</td>
-                        <td>{coeDisplay}</td>
-                        <td>{getStatusBadge(sub.status)}</td>
+                        <td>{batch?.coeId?.name || 'Not Assigned'}</td>
+                        <td>
+                          {batch?.guideId?.name ? (
+                            <span style={{ fontWeight: '500', color: '#2d3748' }}>
+                              👨‍🏫 {batch.guideId.name}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#718096', fontStyle: 'italic' }}>Not Assigned</span>
+                          )}
+                        </td>
                         <td>{sub.marks !== null ? `${sub.marks}/${selectedEvent.maxMarks}` : '-'}</td>
                         <td>
                           {latestAdminRemark ? (
@@ -583,7 +589,7 @@ function TimelineManagement() {
     csvContent += `Max Marks: ${selectedEvent.maxMarks}\n\n`;
 
     // Header row
-    const headers = ['Team Name', 'Team Members', 'Year', 'Branch', 'Section', 'COE', 'Status', 'Marks', 'Admin Remarks'];
+    const headers = ['Team Name', 'Team Members', 'Year', 'Branch', 'Section', 'COE', 'Guide', 'Marks', 'Admin Remarks'];
     csvContent += headers.map(h => `"${h}"`).join(',') + '\n';
 
     // Data rows
@@ -597,6 +603,7 @@ function TimelineManagement() {
       const otherMembers = batch?.teamMembers?.length > 0 ? batch.teamMembers.map(m => m.rollNo).join('; ') : '';
       const allMembers = otherMembers ? `${leaderRollNo}; ${otherMembers}` : leaderRollNo;
       const coe = batch?.problemId?.coeId?.name || batch?.coeId?.name || 'N/A';
+      const guide = batch?.guideId?.name || 'Not Assigned';
 
       const row = [
         batch?.teamName || 'Unknown',
@@ -605,7 +612,7 @@ function TimelineManagement() {
         batch?.branch || 'N/A',
         batch?.section || 'N/A',
         coe,
-        sub.status || 'N/A',
+        guide,
         sub.marks !== null ? `${sub.marks}/${selectedEvent.maxMarks}` : 'N/A',
         `"${latestAdminRemark.replace(/"/g, '""')}"`
       ];

@@ -9,7 +9,6 @@ function RegisterGuide() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [department, setDepartment] = useState('');
-  const [specialization, setSpecialization] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -27,7 +26,7 @@ function RegisterGuide() {
     setLoading(true);
 
     try {
-      await register(name, email, password, 'guide', { department, specialization });
+      await register(name, email, password, 'guide', { department });
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -80,17 +79,6 @@ function RegisterGuide() {
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
               placeholder="e.g., Computer Science"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Specialization</label>
-            <input
-              type="text"
-              value={specialization}
-              onChange={(e) => setSpecialization(e.target.value)}
-              placeholder="e.g., Web Development, AI/ML"
               required
             />
           </div>

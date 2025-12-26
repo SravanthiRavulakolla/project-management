@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
+import ConfirmationDialog from '../../components/ConfirmationDialog';
 
 function SubmissionsReview() {
   const [submissions, setSubmissions] = useState([]);
@@ -7,6 +8,7 @@ function SubmissionsReview() {
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [comment, setComment] = useState('');
   const [marks, setMarks] = useState('');
+  const [dialog, setDialog] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null });
 
   const fetchSubmissions = async () => {
     try {
@@ -30,13 +32,13 @@ function SubmissionsReview() {
       setSelectedSubmission(res.data.data);
       fetchSubmissions();
     } catch (error) {
-      alert('Failed to add comment');
+      showDialog('Error', 'Failed to add comment', 'danger');
     }
   };
 
   const handleAssignMarks = async (status) => {
     if (!marks && status === 'accepted') {
-      alert('Please enter marks');
+      showDialog('Error', 'Please enter marks', 'danger');
       return;
     }
     try {
@@ -54,8 +56,20 @@ function SubmissionsReview() {
       setMarks('');
     } catch (error) {
       console.error('Error assigning marks:', error);
-      alert(error.response?.data?.message || 'Failed to assign marks');
+      showDialog('Error', error.response?.data?.message || 'Failed to assign marks', 'danger');
     }
+  };
+
+  const showDialog = (title, message, type = 'info') => {
+    setDialog({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm: () => {
+        setDialog({ ...dialog, isOpen: false });
+      }
+    });
   };
 
   const getStatusBadge = (status) => {
@@ -88,7 +102,7 @@ function SubmissionsReview() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           <div className="card">
-            <h3>📄 Submitted Versions</h3>
+            <h3>📄 Submitted Submissions</h3>
             {selectedSubmission.versions?.length === 0 ? (
               <p style={{ color: '#888' }}>No submissions yet</p>
             ) : (
@@ -96,7 +110,7 @@ function SubmissionsReview() {
                 {selectedSubmission.versions?.map((v, idx) => (
                   <div key={idx} style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong>Version {v.version}</strong>
+                      <strong>Submission {v.version}</strong>
                       <small>{new Date(v.submittedAt).toLocaleString()}</small>
                     </div>
                     {v.description && <p style={{ color: '#666', fontSize: '14px', margin: '5px 0' }}>{v.description}</p>}
@@ -156,7 +170,7 @@ function SubmissionsReview() {
         <div className="table-container">
           <table className="data-table">
             <thead>
-              <tr><th>Team</th><th>Class</th><th>Event</th><th>Version</th><th>Status</th><th>Marks</th><th>Action</th></tr>
+              <tr><th>Team</th><th>Class</th><th>Event</th><th>Submission</th><th>Status</th><th>Marks</th><th>Action</th></tr>
             </thead>
             <tbody>
               {submissions.map(sub => (
@@ -164,7 +178,7 @@ function SubmissionsReview() {
                   <td><strong>{sub.batchId?.teamName}</strong></td>
                   <td>{sub.batchId?.year} {sub.batchId?.branch}-{sub.batchId?.section}</td>
                   <td>{sub.timelineEventId?.title}</td>
-                  <td>v{sub.currentVersion}</td>
+                  <td>Submission {sub.currentVersion}</td>
                   <td>{getStatusBadge(sub.status)}</td>
                   <td>{sub.marks !== null ? `${sub.marks}/${sub.timelineEventId?.maxMarks}` : '-'}</td>
                   <td><button className="btn btn-primary btn-sm" onClick={() => setSelectedSubmission(sub)}>Review</button></td>
@@ -175,6 +189,16 @@ function SubmissionsReview() {
         </div>
       )}
     </div>
+
+    <ConfirmationDialog
+      isOpen={dialog.isOpen}
+      title={dialog.title}
+      message={dialog.message}
+      type={dialog.type}
+      onConfirm={dialog.onConfirm}
+      onCancel={dialog.onConfirm}
+    />
+    </>
   );
 }
 

@@ -8,7 +8,7 @@ const TeamMember = require('../models/TeamMember');
 exports.getAllBatches = async (req, res) => {
   try {
     let batches = await Batch.find()
-      .populate('leaderStudentId', 'name rollNumber email')
+      .populate('leaderStudentId', 'name rollNumber email branch')
       .populate({
         path: 'problemId',
         select: 'title description coeId guideId targetYear',
@@ -71,7 +71,7 @@ exports.getAllBatches = async (req, res) => {
 exports.getMyBatch = async (req, res) => {
   try {
     const batch = await Batch.findOne({ leaderStudentId: req.user._id })
-      .populate('leaderStudentId', 'name email rollNumber')
+      .populate('leaderStudentId', 'name email rollNumber branch')
       .populate({
         path: 'problemId',
         select: 'title description coeId datasetUrl',
@@ -196,7 +196,7 @@ exports.selectProblem = async (req, res) => {
     await batch.save();
 
     const updatedBatch = await Batch.findById(batch._id)
-      .populate('leaderStudentId', 'name email')
+      .populate('leaderStudentId', 'name email rollNumber branch')
       .populate({
         path: 'optedProblemId',
         select: 'title description coeId',
@@ -229,7 +229,7 @@ exports.getOptedTeams = async (req, res) => {
     const newFormatBatches = await Batch.find({
       'optedProblems.status': 'pending'
     })
-      .populate('leaderStudentId', 'name email')
+      .populate('leaderStudentId', 'name email rollNumber branch')
       .populate('optedProblems.problemId', 'title description guideId')
       .populate('optedProblems.coeId', 'name');
 
@@ -259,7 +259,7 @@ exports.getOptedTeams = async (req, res) => {
         { optedProblems: { $size: 0 } }
       ]
     })
-      .populate('leaderStudentId', 'name email')
+      .populate('leaderStudentId', 'name email rollNumber branch')
       .populate('optedProblemId', 'title description')
       .populate('coeId', 'name');
 
@@ -379,7 +379,7 @@ exports.allotProblem = async (req, res) => {
     console.log('Guide updated successfully');
 
     const updatedBatch = await Batch.findById(batch._id)
-      .populate('leaderStudentId', 'name email')
+      .populate('leaderStudentId', 'name email rollNumber branch')
       .populate({
         path: 'problemId',
         select: 'title description coeId',
@@ -471,7 +471,7 @@ exports.updateBatchStatus = async (req, res) => {
     await batch.save();
 
     const updatedBatch = await Batch.findById(batch._id)
-      .populate('leaderStudentId', 'name email')
+      .populate('leaderStudentId', 'name email rollNumber branch')
       .populate('problemId', 'title description')
       .populate('guideId', 'name email');
 
@@ -486,7 +486,7 @@ exports.updateBatchStatus = async (req, res) => {
 exports.getBatch = async (req, res) => {
   try {
     const batch = await Batch.findById(req.params.id)
-      .populate('leaderStudentId', 'name email')
+      .populate('leaderStudentId', 'name email rollNumber branch')
       .populate('problemId', 'title description coeId datasetUrl')
       .populate('guideId', 'name email');
     

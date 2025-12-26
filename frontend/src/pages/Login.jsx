@@ -33,7 +33,7 @@ function Login() {
         <div className="auth-header">
           <span className="auth-icon">🎓</span>
           <h1>G. Narayanamma Institute of Technology & Science</h1>
-          <p>Mini Project Management Portal</p>
+          <p>ProjectSphere - Project Management Portal</p>
           <div style={{ marginTop: '8px', fontSize: '14px', color: 'var(--text-muted)' }}>
             Hyderabad • Autonomous • NBA Accredited
           </div>

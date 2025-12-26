@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
+import ConfirmationDialog from '../../components/ConfirmationDialog';
 
 function GuideManagement() {
   const [guides, setGuides] = useState([]);
@@ -7,6 +8,7 @@ function GuideManagement() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [saving, setSaving] = useState(false);
+  const [dialog, setDialog] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null });
 
   const fetchGuides = async () => {
     try {
@@ -32,10 +34,22 @@ function GuideManagement() {
       setShowModal(false);
       fetchGuides();
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to create guide');
+      showDialog('Error', error.response?.data?.message || 'Failed to create guide', 'danger');
     } finally {
       setSaving(false);
     }
+  };
+
+  const showDialog = (title, message, type = 'info') => {
+    setDialog({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm: () => {
+        setDialog({ ...dialog, isOpen: false });
+      }
+    });
   };
 
   if (loading) return <div>Loading...</div>;
@@ -130,6 +144,15 @@ function GuideManagement() {
           </div>
         </div>
       )}
+
+      <ConfirmationDialog
+        isOpen={dialog.isOpen}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+        onConfirm={dialog.onConfirm}
+        onCancel={dialog.onConfirm}
+      />
     </div>
   );
 }

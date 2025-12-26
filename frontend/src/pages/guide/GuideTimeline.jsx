@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
+import ConfirmationDialog from '../../components/ConfirmationDialog';
 
 function GuideTimeline() {
   const [timelineEvents, setTimelineEvents] = useState([]);
@@ -10,6 +11,7 @@ function GuideTimeline() {
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [comment, setComment] = useState('');
   const [marks, setMarks] = useState('');
+  const [dialog, setDialog] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null });
 
   const fetchData = async () => {
     try {
@@ -62,13 +64,13 @@ function GuideTimeline() {
       setSelectedSubmission(res.data.data);
       fetchData();
     } catch (error) {
-      alert('Failed to add comment');
+      showDialog('Error', 'Failed to add comment', 'danger');
     }
   };
 
   const handleAssignMarks = async (status) => {
     if (!marks && status === 'accepted') {
-      alert('Please enter marks');
+      showDialog('Error', 'Please enter marks', 'danger');
       return;
     }
     try {
@@ -78,8 +80,20 @@ function GuideTimeline() {
       fetchData();
       setMarks('');
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to assign marks');
+      showDialog('Error', error.response?.data?.message || 'Failed to assign marks', 'danger');
     }
+  };
+
+  const showDialog = (title, message, type = 'info') => {
+    setDialog({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm: () => {
+        setDialog({ ...dialog, isOpen: false });
+      }
+    });
   };
 
   const getStatusBadge = (status) => {
@@ -132,7 +146,7 @@ function GuideTimeline() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           <div className="card">
-            <h3>📄 Submitted Versions</h3>
+            <h3>📄 Submitted Submissions</h3>
             {!submission.versions?.length ? (
               <p style={{ color: '#888' }}>No submissions yet</p>
             ) : (
@@ -140,7 +154,7 @@ function GuideTimeline() {
                 {submission.versions.map((v, idx) => (
                   <div key={idx} style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <strong>Version {v.version}</strong>
+                      <strong>Submission {v.version}</strong>
                       <small>{new Date(v.submittedAt).toLocaleString()}</small>
                     </div>
                     {v.description && <p style={{ color: '#666', fontSize: '14px', margin: '5px 0' }}>{v.description}</p>}
@@ -223,7 +237,7 @@ function GuideTimeline() {
                   <p>{batch.year} Year • {batch.branch} • Section {batch.section}</p>
                   <p><strong>Status:</strong> {getStatusBadge(sub.status)}</p>
                   {sub.marks !== null && <p><strong>Marks:</strong> {sub.marks}/{selectedEvent.maxMarks}</p>}
-                  <p><strong>Versions:</strong> {sub.currentVersion}</p>
+                  <p><strong>Submission:</strong> {sub.currentVersion}</p>
                   <div className="batch-action">Review Submission →</div>
                 </div>
               );
@@ -270,6 +284,15 @@ function GuideTimeline() {
           })}
         </div>
       )}
+
+      <ConfirmationDialog
+        isOpen={dialog.isOpen}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+        onConfirm={dialog.onConfirm}
+        onCancel={dialog.onConfirm}
+      />
     </div>
   );
 }

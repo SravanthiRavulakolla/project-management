@@ -20,7 +20,7 @@ function Layout() {
         <div className="header-content">
           <div className="logo">
             <span className="logo-icon">📚</span>
-            <span className="logo-text">Mini Project Management</span>
+            <span className="logo-text">ProjectSphere</span>
           </div>
           <div className="user-info">
             <span className="user-name">{user?.name}</span>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
+import ConfirmationDialog from '../../components/ConfirmationDialog';
 
 function ProblemManagement() {
   const [problems, setProblems] = useState([]);
@@ -9,6 +10,7 @@ function ProblemManagement() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ coeId: '', title: '', description: '', year: new Date().getFullYear(), guideId: '', datasetUrl: '' });
   const [saving, setSaving] = useState(false);
+  const [dialog, setDialog] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null });
 
   const fetchData = async () => {
     try {
@@ -40,20 +42,36 @@ function ProblemManagement() {
       setShowModal(false);
       fetchData();
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to create problem');
+      showDialog('Error', error.response?.data?.message || 'Failed to create problem', 'danger');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this problem?')) return;
-    try {
-      await api.deleteProblem(id);
-      fetchData();
-    } catch (error) {
-      alert('Failed to delete problem');
-    }
+    showDialog('Delete Problem', 'Are you sure you want to delete this problem?', 'danger', async () => {
+      try {
+        await api.deleteProblem(id);
+        fetchData();
+      } catch (error) {
+        showDialog('Error', 'Failed to delete problem', 'danger');
+      }
+    });
+  };
+
+  const showDialog = (title, message, type = 'info', onConfirm = null) => {
+    setDialog({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm: () => {
+        if (onConfirm) onConfirm();
+        setDialog({ ...dialog, isOpen: false });
+      },
+      confirmText: onConfirm ? (type === 'danger' ? 'Delete' : 'Yes') : 'OK',
+      cancelText: onConfirm ? 'Cancel' : 'OK'
+    });
   };
 
   if (loading) return <div>Loading...</div>;
@@ -151,6 +169,17 @@ function ProblemManagement() {
           </div>
         </div>
       )}
+
+      <ConfirmationDialog
+        isOpen={dialog.isOpen}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+        onConfirm={dialog.onConfirm}
+        onCancel={() => setDialog({ ...dialog, isOpen: false })}
+        confirmText={dialog.confirmText}
+        cancelText={dialog.cancelText}
+      />
     </div>
   );
 }

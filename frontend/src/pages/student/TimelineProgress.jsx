@@ -24,7 +24,7 @@ function TimelineProgress({ batchId }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!submissionForm.fileUrl.trim()) {
-      alert('Please provide a file URL');
+      showDialog('Error', 'Please provide a file URL', 'danger');
       return;
     }
     setSubmitting(true);
@@ -41,10 +41,16 @@ function TimelineProgress({ batchId }) {
       const updated = res.data.data.find(e => e._id === selectedEvent._id);
       setSelectedEvent(updated);
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to submit');
+      showDialog('Error', error.response?.data?.message || 'Failed to submit', 'danger');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const showDialog = (title, message, type = 'info') => {
+    // For simple alerts, we'll use a basic dialog
+    const dialogMsg = `${title}\\n${message}`;
+    window.alert(dialogMsg);
   };
 
   const getStatusBadge = (status) => {
@@ -103,7 +109,7 @@ function TimelineProgress({ batchId }) {
                 {submission.versions.map((v, idx) => (
                   <div key={idx} style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <strong>Version {v.version}</strong>
+                      <strong>Submission {v.version}</strong>
                       <small>{new Date(v.submittedAt).toLocaleString()}</small>
                     </div>
                     {v.description && <p style={{ color: '#666', fontSize: '14px', margin: '5px 0' }}>{v.description}</p>}

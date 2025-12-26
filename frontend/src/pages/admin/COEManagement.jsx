@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
+import ConfirmationDialog from '../../components/ConfirmationDialog';
 
 function COEManagement() {
   const [coes, setCOEs] = useState([]);
@@ -7,6 +8,7 @@ function COEManagement() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [saving, setSaving] = useState(false);
+  const [dialog, setDialog] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null });
 
   const fetchCOEs = async () => {
     try {
@@ -32,20 +34,36 @@ function COEManagement() {
       setShowModal(false);
       fetchCOEs();
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to create COE');
+      showDialog('Error', error.response?.data?.message || 'Failed to create COE', 'danger');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this COE?')) return;
-    try {
-      await api.deleteCOE(id);
-      fetchCOEs();
-    } catch (error) {
-      alert('Failed to delete COE');
-    }
+    showDialog('Delete COE', 'Are you sure you want to delete this COE?', 'danger', async () => {
+      try {
+        await api.deleteCOE(id);
+        fetchCOEs();
+      } catch (error) {
+        showDialog('Error', 'Failed to delete COE', 'danger');
+      }
+    });
+  };
+
+  const showDialog = (title, message, type = 'info', onConfirm = null) => {
+    setDialog({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm: () => {
+        if (onConfirm) onConfirm();
+        setDialog({ ...dialog, isOpen: false });
+      },
+      confirmText: onConfirm ? (type === 'danger' ? 'Delete' : 'Yes') : 'OK',
+      cancelText: onConfirm ? 'Cancel' : 'OK'
+    });
   };
 
   if (loading) return <div>Loading...</div>;
@@ -124,6 +142,17 @@ function COEManagement() {
           </div>
         </div>
       )}
+
+      <ConfirmationDialog
+        isOpen={dialog.isOpen}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+        onConfirm={dialog.onConfirm}
+        onCancel={() => setDialog({ ...dialog, isOpen: false })}
+        confirmText={dialog.confirmText}
+        cancelText={dialog.cancelText}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
 
-function TeamMembers({ batchId }) {
+function TeamMembers({ batchId, leader }) {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -83,7 +83,7 @@ function TeamMembers({ batchId }) {
         </div>
       )}
 
-      {members.length === 0 ? (
+      {members.length === 0 && !leader ? (
         <div className="empty-state">
           <div className="empty-state-icon">👥</div>
           <h3>No Team Members Yet</h3>

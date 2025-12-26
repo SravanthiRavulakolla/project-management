@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
+import ConfirmationDialog from '../../components/ConfirmationDialog';
 
 function ProblemList({ coeId, coeName, onBack, onProblemSelected, batch }) {
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selecting, setSelecting] = useState(null);
+  const [dialog, setDialog] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null });
 
   const fetchProblems = async () => {
     try {
@@ -25,18 +27,35 @@ function ProblemList({ coeId, coeName, onBack, onProblemSelected, batch }) {
   const optedProblemIds = batch?.optedProblems?.map(o => o.problemId?._id || o.problemId) || [];
 
   const handleSelect = async (problemId) => {
-    if (!confirm('Are you sure you want to select this problem?')) return;
-    setSelecting(problemId);
-    try {
-      await api.selectProblem(problemId);
-      alert('Problem selected successfully! You can select up to 3 problems.');
-      onProblemSelected();
-      fetchProblems(); // Refresh list
-    } catch (error) {
-      alert(error.response?.data?.message || 'Failed to select problem');
-    } finally {
-      setSelecting(null);
-    }
+    showDialog('Select Problem', 'Are you sure you want to select this problem?', 'info', async () => {
+      setSelecting(problemId);
+      try {
+        await api.selectProblem(problemId);
+        showDialog('Success', 'Problem selected successfully! You can select up to 3 problems.', 'success', () => {
+          onProblemSelected();
+          fetchProblems();
+        });
+      } catch (error) {
+        showDialog('Error', error.response?.data?.message || 'Failed to select problem', 'danger');
+      } finally {
+        setSelecting(null);
+      }
+    });
+  };
+
+  const showDialog = (title, message, type = 'info', onConfirm = null) => {
+    setDialog({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm: () => {
+        if (onConfirm) onConfirm();
+        setDialog({ ...dialog, isOpen: false });
+      },
+      confirmText: onConfirm ? 'Yes' : 'OK',
+      cancelText: onConfirm ? 'Cancel' : 'OK'
+    });
   };
 
   if (loading) return <div>Loading problems...</div>;
@@ -125,6 +144,16 @@ function ProblemList({ coeId, coeName, onBack, onProblemSelected, batch }) {
           })}
         </div>
       )}
+      <ConfirmationDialog
+        isOpen={dialog.isOpen}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+        onConfirm={dialog.onConfirm}
+        onCancel={() => setDialog({ ...dialog, isOpen: false })}
+        confirmText={dialog.confirmText}
+        cancelText={dialog.cancelText}
+      />
     </div>
   );
 }

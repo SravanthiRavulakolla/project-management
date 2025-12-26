@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
 import BatchDetails from './BatchDetails';
 import GuideTimeline from './GuideTimeline';
+import ExcelImportProblem from './ExcelImportProblem';
+import ConfirmationDialog from '../../components/ConfirmationDialog';
 import './GuideDashboard.css';
 
 function GuideDashboard() {
@@ -14,9 +16,17 @@ function GuideDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [showAddProblem, setShowAddProblem] = useState(false);
+  const [showImportExcel, setShowImportExcel] = useState(false);
   const [newProblem, setNewProblem] = useState({ title: '', description: '', coeId: '', targetYear: '', datasetUrl: '' });
+  const [dialog, setDialog] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null, confirmText: 'OK', cancelText: 'Cancel' });
 
   const TARGET_YEARS = ['2nd', '3rd', '4th'];
+  
+  const YEAR_LABELS = {
+    '2nd': '2nd - Real Time Project',
+    '3rd': '3rd - Mini Project',
+    '4th': '4th - Major Project'
+  };
 
   const fetchData = async () => {
     try {
@@ -49,33 +59,62 @@ function GuideDashboard() {
       setShowAddProblem(false);
       fetchData();
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to add problem');
+      showDialog('Error', error.response?.data?.message || 'Failed to add problem', 'danger');
     }
   };
 
   const handleDeleteProblem = async (id) => {
-    if (window.confirm('Delete this problem statement?')) {
+    showDialog('Delete Problem', 'Are you sure you want to delete this problem statement?', 'danger', async () => {
       try {
         await api.deleteProblem(id);
         fetchData();
       } catch (error) {
-        alert('Failed to delete');
+        showDialog('Error', 'Failed to delete', 'danger');
       }
-    }
+    });
   };
 
   const handleAllot = async (batchId, problemId) => {
     try {
       await api.allotProblem(batchId, problemId);
-      alert('Team allotted successfully!');
-      fetchData();
+      showDialog('Success', 'Team allotted successfully!', 'success', () => {
+        fetchData();
+      });
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to allot');
+      showDialog('Error', error.response?.data?.message || 'Failed to allot', 'danger');
     }
+  };
+
+  const handleReject = async (batchId, problemId) => {
+    showDialog('Reject Request', 'Are you sure you want to reject this request?', 'warning', async () => {
+      try {
+        await api.rejectProblem(batchId, problemId);
+        showDialog('Success', 'Request rejected successfully!', 'success', () => {
+          fetchData();
+        });
+      } catch (error) {
+        showDialog('Error', error.response?.data?.message || 'Failed to reject', 'danger');
+      }
+    });
   };
 
   const getAcceptedSubmissionsCount = (batchId) => {
     return submissions.filter(s => s.batchId._id === batchId && s.status === 'accepted').length;
+  };
+
+  const showDialog = (title, message, type = 'info', onConfirm = null) => {
+    setDialog({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm: () => {
+        if (onConfirm) onConfirm();
+        setDialog({ ...dialog, isOpen: false });
+      },
+      confirmText: onConfirm ? (type === 'danger' ? 'Delete' : 'Yes') : 'OK',
+      cancelText: onConfirm ? 'Cancel' : 'OK'
+    });
   };
 
   if (loading) return <div className="loading">Loading...</div>;
@@ -107,8 +146,22 @@ function GuideDashboard() {
         <div className="tab-content">
           <div className="section-header">
             <h2>📋 My Problem Statements</h2>
-            <button className="btn btn-primary" onClick={() => setShowAddProblem(true)}>+ Add Problem</button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="btn btn-primary" onClick={() => { setShowAddProblem(true); setShowImportExcel(false); }}>+ Add Problem</button>
+              <button className="btn btn-secondary" onClick={() => { setShowImportExcel(true); setShowAddProblem(false); }} style={{ backgroundColor: '#17a2b8' }}>📊 Import from Excel</button>
+            </div>
           </div>
+          {showImportExcel && (
+            <ExcelImportProblem
+              coes={coes}
+              targetYears={TARGET_YEARS}
+              onImportComplete={() => {
+                setShowImportExcel(false);
+                fetchData();
+              }}
+              onCancel={() => setShowImportExcel(false)}
+            />
+          )}
           {showAddProblem && (
             <div className="card" style={{ marginBottom: '20px' }}>
               <form onSubmit={handleAddProblem}>
@@ -122,7 +175,7 @@ function GuideDashboard() {
                   <div className="form-group"><label>Target Year</label>
                     <select value={newProblem.targetYear} onChange={(e) => setNewProblem({...newProblem, targetYear: e.target.value})} required>
                       <option value="">Select Year</option>
-                      {TARGET_YEARS.map(y => <option key={y} value={y}>{y} Year</option>)}
+                      {TARGET_YEARS.map(y => <option key={y} value={y}>{YEAR_LABELS[y]}</option>)}
                     </select>
                   </div>
                 </div>
@@ -130,6 +183,9 @@ function GuideDashboard() {
                 <div className="form-group"><label>Description</label><textarea value={newProblem.description} onChange={(e) => setNewProblem({...newProblem, description: e.target.value})} rows={3} /></div>
                 <div className="form-group"><label>Dataset URL (optional)</label><input type="url" value={newProblem.datasetUrl} onChange={(e) => setNewProblem({...newProblem, datasetUrl: e.target.value})} /></div>
                 <div style={{ display: 'flex', gap: '10px' }}><button type="submit" className="btn btn-primary">Save</button><button type="button" className="btn btn-secondary" onClick={() => setShowAddProblem(false)}>Cancel</button></div>
+                <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f0f4ff', borderRadius: '4px', fontSize: '12px', color: '#666' }}>
+                  💡 Tip: You can also import multiple problems at once using the "Import from Excel" button
+                </div>
               </form>
             </div>
           )}
@@ -160,7 +216,7 @@ function GuideDashboard() {
                   <div className="batch-icon">👥</div>
                   <h3>{t.teamName}</h3>
                   <p style={{ color: '#667eea', fontWeight: '500', marginBottom: '10px' }}>
-                    {t.year} Year • {t.branch} • Section {t.section}
+                    <strong>Year:</strong> {t.year} • {t.branch}
                   </p>
                   <p><strong>Leader:</strong> {t.leaderStudentId?.name}</p>
                   <p><strong>Opted Problem:</strong> {t.optedProblemId?.title}</p>
@@ -186,6 +242,7 @@ function GuideDashboard() {
                   <div className="batch-status"><span className={`badge badge-${b.status === 'Completed' ? 'success' : b.status === 'In Progress' ? 'warning' : 'info'}`}>{b.status}</span></div>
                   <div className="batch-icon">👥</div>
                   <h3>{b.teamName}</h3>
+                  <p style={{ fontSize: '12px', color: '#718096', marginBottom: '8px' }}><strong>Year:</strong> {b.year}</p>
                   <p className="batch-leader">Leader: {b.leaderStudentId?.name}</p>
                   <p className="batch-problem">📋 {b.problemId?.title}</p>
                   <p className="batch-submissions">✅ Accepted Submissions: {getAcceptedSubmissionsCount(b._id)}</p>
@@ -198,6 +255,17 @@ function GuideDashboard() {
       )}
 
       {activeTab === 'submissions' && <GuideTimeline />}
+      
+      <ConfirmationDialog
+        isOpen={dialog.isOpen}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+        onConfirm={dialog.onConfirm}
+        onCancel={() => setDialog({ ...dialog, isOpen: false })}
+        confirmText={dialog.confirmText}
+        cancelText={dialog.cancelText}
+      />
     </div>
   );
 }
