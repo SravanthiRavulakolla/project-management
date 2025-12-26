@@ -112,7 +112,7 @@ function BatchDetails({ batchId, onBack }) {
                 <div key={member._id} style={{ background: '#f7fafc', padding: '8px 12px', borderRadius: '8px', fontSize: '14px' }}>
                   <strong>{member.name}</strong> - {member.rollNo} ({batch.branch || 'N/A'}-{batch.section || 'N/A'})
                 </div>
-              ))}}
+              ))}
             </div>
           ) : (
             <p style={{ color: '#718096' }}>No team members added</p>

@@ -535,10 +535,8 @@ function TimelineManagement() {
                     setShowRemarkModal(false);
                     setSelectedSubmissionForRemark(null);
                     fetchEvents();
-                    alert('Remark added successfully!');
                   } catch (error) {
                     console.error('Error adding remark:', error);
-                    alert('Failed to add remark');
                   }
                 }}
               >

@@ -146,7 +146,7 @@ function GuideTimeline() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           <div className="card">
-            <h3>📄 Submitted Submissions</h3>
+            <h3>📄 Submission History</h3>
             {!submission.versions?.length ? (
               <p style={{ color: '#888' }}>No submissions yet</p>
             ) : (
