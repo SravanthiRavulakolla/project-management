@@ -59,6 +59,7 @@ export const getAdminDashboard = () => axios.get(`${API_URL}/admin/dashboard`);
 export const getAdminOverview = () => axios.get(`${API_URL}/admin/overview`);
 export const getBatchGuideMapping = () => axios.get(`${API_URL}/admin/batch-guide-mapping`);
 export const createAdmin = (data) => axios.post(`${API_URL}/admin/create`, data);
+export const importBatches = (data) => axios.post(`${API_URL}/admin/import-batches`, data);
 
 // Timeline
 export const getAllTimelineEvents = (year) => axios.get(`${API_URL}/timeline`, { params: { year } });

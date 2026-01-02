@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
 import COEManagement from './COEManagement';
 import TimelineManagement from './TimelineManagement';
+import BatchImport from './BatchImport';
 import './AdminDashboard.css';
 
 const YEARS = ['2nd', '3rd', '4th'];
@@ -59,6 +60,12 @@ function AdminDashboard() {
     });
   };
 
+  const handleSelectBatch = (batch) => {
+    setSelectedBatch(batch);
+    // Scroll to top of the page to show the batch details
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   if (loading) return <div className="loading">Loading...</div>;
 
   console.log('AdminDashboard: Rendering with activeTab:', activeTab);
@@ -83,11 +90,24 @@ function AdminDashboard() {
       <div className="tabs">
         <button className={`tab ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>📅 Timeline</button>
         <button className={`tab ${activeTab === 'filter' ? 'active' : ''}`} onClick={() => { setActiveTab('filter'); setSelectedBatch(null); }}>🔍 Filter by Class</button>
+        <button className={`tab ${activeTab === 'import' ? 'active' : ''}`} onClick={() => setActiveTab('import')}>📤 Batch Import</button>
         <button className={`tab ${activeTab === 'coes' ? 'active' : ''}`} onClick={() => { setActiveTab('coes'); setSelectedCOE(null); }}>🏛️ COE Overview</button>
         <button className={`tab ${activeTab === 'manage' ? 'active' : ''}`} onClick={() => setActiveTab('manage')}>⚙️ Manage COEs</button>
       </div>
 
       {activeTab === 'timeline' && <TimelineManagement />}
+
+      {activeTab === 'import' && (
+        <div className="tab-content">
+          <BatchImport 
+            onImportComplete={() => {
+              setActiveTab('filter');
+              fetchData();
+            }}
+            onCancel={() => setActiveTab('filter')}
+          />
+        </div>
+      )}
 
       {activeTab === 'filter' && !selectedBatch && (
         <div className="tab-content">
@@ -140,27 +160,38 @@ function AdminDashboard() {
                 <thead>
                   <tr>
                     <th>Team Name</th>
+                    <th>Team Members</th>
                     <th>Class</th>
-                    <th>Leader</th>
-                    <th>Problem Statement</th>
+                    <th>COE</th>
                     <th>Guide</th>
-                    <th>Status</th>
-                    <th>Action</th>
+                    <th>Problem</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredBatches.map(batch => (
+                  {filteredBatches.map((batch) => (
                     <tr key={batch._id}>
                       <td><strong>{batch.teamName}</strong></td>
-                      <td>{batch.year} {batch.branch}-{batch.section}</td>
-                      <td>{batch.leaderStudentId?.name}</td>
-                      <td>{batch.problemId?.title || batch.optedProblemId?.title || <span style={{ color: '#999' }}>Not assigned</span>}</td>
-                      <td>{batch.guideId?.name || <span style={{ color: '#f59e0b' }}>Pending</span>}</td>
-                      <td><span className={`badge badge-${getStatusColor(batch.status)}`}>{batch.status}</span></td>
                       <td>
-                        <button className="btn btn-primary btn-sm" onClick={() => setSelectedBatch(batch)}>
-                          View Details
-                        </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {batch.leaderStudentId && (
+                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#2d3748' }}>
+                              👑 {batch.leaderStudentId.rollNumber || batch.leaderStudentId.name}
+                            </div>
+                          )}
+                          {batch.teamMembers && batch.teamMembers.map((member, idx) => (
+                            <div key={idx} style={{ fontSize: '12px', color: '#4a5568', paddingLeft: '18px' }}>
+                              • {member.rollNo || member.name}
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td>{batch.year} {batch.branch}-{batch.section}</td>
+                      <td>{batch.coeId?.name || 'Not Assigned'}</td>
+                      <td>{batch.guideId?.name || 'Not Assigned'}</td>
+                      <td>{batch.problemId?.title || 'Not Assigned'}</td>
+                      <td>
+                        <button className="btn btn-primary btn-sm" onClick={() => handleSelectBatch(batch)}>View Details</button>
                       </td>
                     </tr>
                   ))}
@@ -175,35 +206,78 @@ function AdminDashboard() {
         <div className="tab-content">
           <button className="btn btn-secondary" onClick={() => setSelectedBatch(null)} style={{ marginBottom: '20px' }}>← Back to List</button>
 
-          <div className="card" style={{ marginBottom: '20px' }}>
-            <h2>👥 {selectedBatch.teamName}</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
+          <div className="card" style={{ marginBottom: '20px', borderLeft: '4px solid #667eea' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
               <div>
-                <p><strong>Class:</strong> {selectedBatch.year} Year - {selectedBatch.branch} - Section {selectedBatch.section}</p>
-                <p><strong>Team Leader:</strong> {selectedBatch.leaderStudentId?.name}</p>
-                <p><strong>Email:</strong> {selectedBatch.leaderStudentId?.email}</p>
+                <h3>{selectedBatch.teamName}</h3>
+                <p><strong>Year:</strong> {selectedBatch.year}</p>
+                <p><strong>Branch:</strong> {selectedBatch.branch}</p>
+                <p><strong>Section:</strong> {selectedBatch.section}</p>
               </div>
               <div>
-                <p><strong>Problem Statement:</strong> {selectedBatch.problemId?.title || 'Not assigned'}</p>
-                <p><strong>Guide:</strong> {selectedBatch.guideId?.name || 'Not assigned'}</p>
-                <p><strong>COE:</strong> {selectedBatch.coeId?.name || 'Not assigned'}</p>
+                <p><strong>COE:</strong> {selectedBatch.coeId?.name || 'Not Assigned'}</p>
+                <p><strong>Guide:</strong> {selectedBatch.guideId?.name || 'Not Assigned'}</p>
+                <p><strong>Problem:</strong> {selectedBatch.problemId?.title || 'Not Assigned'}</p>
               </div>
             </div>
           </div>
 
           <div className="card">
-            <h3>📊 Progress Status</h3>
-            <div style={{ marginTop: '15px' }}>
-              <span className={`badge badge-${getStatusColor(selectedBatch.status)}`} style={{ fontSize: '16px', padding: '10px 20px' }}>
-                {selectedBatch.status}
-              </span>
+            <h3>👥 Team Members</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {selectedBatch.leaderStudentId && (
+                <div style={{ 
+                  padding: '12px', 
+                  background: '#e6f2ff', 
+                  borderRadius: '6px', 
+                  borderLeft: '4px solid #667eea',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <div style={{ fontWeight: 'bold', color: '#2d3748', marginBottom: '4px' }}>
+                      👑 Team Leader
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#2d3748' }}>
+                      {selectedBatch.leaderStudentId.name} - {selectedBatch.leaderStudentId.rollNumber}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#718096', marginTop: '4px' }}>
+                      {selectedBatch.year} {selectedBatch.branch}-{selectedBatch.section}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {selectedBatch.teamMembers && selectedBatch.teamMembers.length > 0 ? (
+                selectedBatch.teamMembers.map((member, idx) => (
+                  <div key={idx} style={{ 
+                    padding: '12px', 
+                    background: '#f7fafc', 
+                    borderRadius: '6px', 
+                    borderLeft: '4px solid #cbd5e0',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: '500', color: '#2d3748', marginBottom: '4px' }}>
+                        Team Member {idx + 1}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#2d3748' }}>
+                        {member.name} - {member.rollNo}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#718096', marginTop: '4px' }}>
+                        {selectedBatch.year} {selectedBatch.branch}-{selectedBatch.section}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: '12px', color: '#718096', fontStyle: 'italic' }}>
+                  No other team members
+                </div>
+              )}
             </div>
-            {selectedBatch.problemId?.description && (
-              <div style={{ marginTop: '20px' }}>
-                <h4>Problem Description:</h4>
-                <p style={{ color: '#666' }}>{selectedBatch.problemId.description}</p>
-              </div>
-            )}
           </div>
         </div>
       )}

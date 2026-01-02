@@ -96,7 +96,10 @@ exports.login = async (req, res) => {
     // If role is specified, search in that collection
     if (role) {
       if (role === 'student') {
-        user = await Student.findOne({ email }).select('+password');
+        // For students, check both email and rollNumber
+        user = await Student.findOne({ 
+          $or: [{ email: email }, { rollNumber: email }] 
+        }).select('+password');
         userRole = 'student';
       } else if (role === 'guide') {
         user = await Guide.findOne({ email }).select('+password');
@@ -107,7 +110,10 @@ exports.login = async (req, res) => {
       }
     } else {
       // Auto-detect role by searching all collections
-      user = await Student.findOne({ email }).select('+password');
+      // For students, check both email and rollNumber
+      user = await Student.findOne({ 
+        $or: [{ email: email }, { rollNumber: email }] 
+      }).select('+password');
       userRole = 'student';
 
       if (!user) {
